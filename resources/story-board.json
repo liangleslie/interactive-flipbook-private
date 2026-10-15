@@ -11,8 +11,8 @@
       "chapterTag": "Special Edition",
       "narrative": "A Tale of Fun & Friendship",
       "narrative2": "With a flutter of fairy wings and a sprinkle of stardust, the journey begins!",
-      "upperArt": "../resources/png/sg-1.png",
-      "lowerArt": "../resources/png/sg-2.png",
+      "upperArt": "../resources/png/sherry-1.png",
+      "lowerArt": "../resources/png/sherry-2.png",
       "characterName": "Sherry",
       "cue": "Scroll along the path ➔"
     },
@@ -52,9 +52,9 @@
       "title": "The End ✨",
       "chapterTag": "To Sherry With Love",
       "narrative": "Thank you for joining our magical tale! Happy memories and laughter forever.",
-      "narrative2": "And so their great adventure blossomed into forever friendships and joyful smiles!",
-      "upperArt": "../resources/png/sg-1.png",
-      "lowerArt": "../resources/png/sg-2.png",
+      "narrative2": "On to new adventures...",
+      "upperArt": "../resources/png/sherry-3.png",
+      "lowerArt": "../resources/png/sherry-end.png",
       "characterName": "Sherry",
       "cue": "Scroll back to revisit ↺"
     }

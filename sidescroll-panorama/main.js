@@ -71,6 +71,15 @@ function renderPanoramaDOM() {
               <div class="end-star">🌟</div>
               <h2 class="end-heading">${page.title}</h2>
               <p class="end-dedication">${page.narrative || page.text2 || ''}</p>
+
+              <div class="character-spot">
+                <div class="character-morph-target" data-index="${i}" title="Tap or scroll to morph">
+                  <img src="${page.lowerArt}" alt="${page.characterName || 'Hero'} finale" class="character-img lower-art" />
+                  <img src="${page.upperArt}" alt="${page.characterName || 'Hero'} climax" class="character-img upper-art" />
+                </div>
+              </div>
+
+              <p class="story-narrative-2">${page.narrative2 || page.caption || ''}</p>
               <div class="end-tag">${page.chapterTag || page.text1 || 'Continuous Story Panorama'}</div>
             </div>
           </div>
@@ -113,13 +122,25 @@ const morphTargets = Array.from(document.querySelectorAll('.character-morph-targ
 
 let currentSceneIndex = 0;
 
-// 4-Phase Animation Budget (in pixels of scroll delta)
-const D_APPROACH = 280; // Phase 0: Approach to center (upper-art 50% -> 100%, backing/text 0 -> 1)
-const D_LINGER_1 = 140; // Phase 1: Center in-focus linger (upper-art 100%, backing/text 1, narrative2 0)
-const D_MORPH = 320;    // Phase 2: Morph upper-art -> lower-art & reveal story-narrative-2
-const D_LINGER_2 = 140; // Phase 3: Post-morph linger (lower-art 100%, story-narrative-2 1)
-const D_OUTRO = 260;    // Phase 4: Backing & text fade out (1 -> 0), lower-art scales down to 50% (1.0 -> 0.5)
-const D_TOTAL = D_LINGER_1 + D_MORPH + D_LINGER_2 + D_OUTRO; // 860px total pinned window
+// 5-Phase Animation Budget (in pixels of scroll delta)
+const D_FADE_IN = 200;  // Phase 2: Backing fades in (0 -> 1), upper-art scales (0.5 -> 1.0) once centered & pinned
+const D_MORPH = 320;    // Phase 3a: Morph upper-art -> lower-art & reveal narrative2 once solid
+const D_LINGER = 140;   // Phase 3b: Dwell at center with lower-art & narrative2 in full focus
+const D_FADE_OUT = 200; // Phase 4: Backing fades out (1 -> 0), narrative2/text fade out, lower-art scales to 50%
+const D_TOTAL = D_FADE_IN + D_MORPH + D_LINGER + D_FADE_OUT; // 860px total pinned window
+
+// Cover page budget (starts with backing fade-in complete, morphs & reveals narrative2, then fade-out & outro)
+const D_COVER_PRE_LINGER = 140;  // Center dwell with backing fully visible & upper-art full size
+const D_COVER_MORPH = 320;       // Morph upper-art -> lower-art & reveal narrative2
+const D_COVER_POST_LINGER = 140; // Dwell with lower-art & narrative2 in full focus
+const D_COVER_FADE_OUT = 200;    // Backing fades out (1 -> 0), lower-art scales to 50%
+const D_COVER_TOTAL = D_COVER_PRE_LINGER + D_COVER_MORPH + D_COVER_POST_LINGER + D_COVER_FADE_OUT; // 800px
+
+// End page budget (fades in upperArt on approach, centers & pins, morphs into lowerArt & narrative2)
+const D_END_PRE_LINGER = 100;    // Center dwell with backing solid & upper-art full size
+const D_END_MORPH = 320;         // Morph upper-art -> lower-art & reveal narrative2
+const D_END_POST_LINGER = 120;   // Final celebration dwell in full focus until max scroll
+const D_END_TOTAL = D_END_PRE_LINGER + D_END_MORPH + D_END_POST_LINGER; // 540px
 
 function updateSceneUI(idx) {
   currentSceneIndex = idx;
@@ -143,9 +164,6 @@ function getScenePinStart(idx) {
   if (!viewport || !scenes[idx]) return 0;
   if (idx === 0) return 0;
   const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
-  if (idx === scenes.length - 1) {
-    return maxScroll;
-  }
   const scene = scenes[idx];
   const card = scene.querySelector('.station-card') || scene.querySelector('.station-flow');
   const stationWidth = card ? card.offsetWidth : (scene.offsetWidth || 440);
@@ -156,13 +174,13 @@ window.getScenePinStart = getScenePinStart;
 
 function getSceneCenterScroll(idx) {
   if (idx === 0) return 0;
-  if (idx === scenes.length - 1) {
-    return Math.max(0, viewport.scrollWidth - viewport.clientWidth);
-  }
-  // Scroll to scene pin start plus pre-linger so character is centered in focus & ready to morph
   const pinStart = getScenePinStart(idx);
   const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
-  return Math.min(pinStart + Math.round(D_LINGER_1 / 2), maxScroll);
+  if (idx === scenes.length - 1) {
+    return Math.min(pinStart + D_END_PRE_LINGER + D_END_MORPH, maxScroll);
+  }
+  // Scroll to scene pin start plus fade-in window so card is fully solid white & ready to morph
+  return Math.min(pinStart + D_FADE_IN, maxScroll);
 }
 window.getSceneCenterScroll = getSceneCenterScroll;
 
@@ -171,7 +189,8 @@ function getActiveSceneIndex(S) {
   for (let i = 0; i < scenes.length - 1; i++) {
     const Si = getScenePinStart(i);
     const Snext = getScenePinStart(i + 1);
-    const midpoint = (Si + D_TOTAL + Snext) / 2;
+    const pinDist = i === 0 ? D_COVER_TOTAL : (i === scenes.length - 1 ? D_END_TOTAL : D_TOTAL);
+    const midpoint = (Si + pinDist + Snext) / 2;
     if (S < midpoint) return i;
   }
   return scenes.length - 1;
@@ -206,10 +225,11 @@ window.addEventListener('keydown', (e) => {
 
 function getCenterFriction() {
   const S = viewport.scrollLeft;
-  for (let i = 0; i < scenes.length - 1; i++) {
+  for (let i = 0; i < scenes.length; i++) {
     const sc = getScenePinStart(i);
+    const pinDist = i === 0 ? D_COVER_TOTAL : (i === scenes.length - 1 ? D_END_TOTAL : D_TOTAL);
     const delta = S - sc;
-    if (delta >= 0 && delta <= D_TOTAL) {
+    if (delta >= 0 && delta <= pinDist) {
       return 0.85;
     }
   }
@@ -227,16 +247,17 @@ window.addEventListener('wheel', (e) => {
 
 function getBackgroundShift(S) {
   let shift = 0;
-  for (let i = 0; i < scenes.length - 1; i++) {
+  for (let i = 0; i < scenes.length; i++) {
     const S_pin = getScenePinStart(i);
+    const pinDist = i === 0 ? D_COVER_TOTAL : (i === scenes.length - 1 ? D_END_TOTAL : D_TOTAL);
     const delta = S - S_pin;
     if (delta <= 0) {
       break;
-    } else if (delta < D_TOTAL) {
+    } else if (delta < pinDist) {
       shift += delta;
       break;
     } else {
-      shift += D_TOTAL;
+      shift += pinDist;
     }
   }
   return shift;
@@ -273,19 +294,90 @@ function updateScrollDrivenMorphs() {
     const S_pin = getScenePinStart(i);
     const delta = S - S_pin;
 
-    // For end scene (no morph target, dedication card)
+    // For end scene: upperArt fade in, centers and pins, morphs into lowerArt and shows narrative2
     if (i === scenes.length - 1) {
-      let endOpacity = 1;
-      if (delta < -D_APPROACH) {
-        endOpacity = 0;
+      let backingOpacity = 1;
+      let textOpacity = 1;
+      let charScale = 1;
+      let upperOpacity = 1;
+      let lowerOpacity = 0;
+      let narrative2Opacity = 0;
+      let phase = '';
+
+      if (delta < -D_FADE_IN) {
+        // Approaching from far away: hidden
+        backingOpacity = 0;
+        textOpacity = 0;
+        charScale = 0.5;
+        upperOpacity = 0;
+        lowerOpacity = 0;
+        narrative2Opacity = 0;
+        phase = 'intro';
       } else if (delta < 0) {
-        const p = (delta + D_APPROACH) / D_APPROACH;
-        endOpacity = Math.sin((p * Math.PI) / 2);
+        // Approach: backing, text, and upperArt fade in together (0 -> 1), char scales (0.5 -> 1.0)
+        const p = (delta + D_FADE_IN) / D_FADE_IN;
+        const smoothIn = Math.sin((p * Math.PI) / 2);
+        backingOpacity = smoothIn;
+        textOpacity = smoothIn;
+        charScale = 0.5 + 0.5 * smoothIn;
+        upperOpacity = smoothIn;
+        lowerOpacity = 0;
+        narrative2Opacity = 0;
+        phase = 'backing-fade-in';
+      } else if (delta < D_END_PRE_LINGER) {
+        // Centered & pinned: upper-art full size and solid backing
+        backingOpacity = 1;
+        textOpacity = 1;
+        charScale = 1;
+        upperOpacity = 1;
+        lowerOpacity = 0;
+        narrative2Opacity = 0;
+        phase = 'pre-linger';
+      } else if (delta < D_END_PRE_LINGER + D_END_MORPH) {
+        // Morph: upperArt morphs into lowerArt, narrative2 appears
+        const rawMorph = (delta - D_END_PRE_LINGER) / D_END_MORPH;
+        const smoothMorph = Math.sin((rawMorph * Math.PI) / 2);
+        backingOpacity = 1;
+        textOpacity = 1;
+        charScale = 1;
+        upperOpacity = 1 - smoothMorph;
+        lowerOpacity = smoothMorph;
+        narrative2Opacity = smoothMorph;
+        phase = 'morphing';
       } else {
-        endOpacity = 1;
+        // Final celebration: lowerArt in full glory, narrative2 visible, holds to maxScroll
+        backingOpacity = 1;
+        textOpacity = 1;
+        charScale = 1;
+        upperOpacity = 0;
+        lowerOpacity = 1;
+        narrative2Opacity = 1;
+        phase = 'post-linger';
       }
-      scene.style.setProperty('--backing-opacity', endOpacity.toFixed(3));
-      scene.style.setProperty('--text-opacity', endOpacity.toFixed(3));
+
+      scene.style.setProperty('--backing-opacity', backingOpacity.toFixed(3));
+      scene.style.setProperty('--text-opacity', textOpacity.toFixed(3));
+      scene.style.setProperty('--char-scale', charScale.toFixed(3));
+
+      if (morphTarget) {
+        if (phase) morphTarget.setAttribute('data-phase', phase);
+        else morphTarget.removeAttribute('data-phase');
+      }
+
+      if (upper && lower && !morphTarget?.classList.contains('is-pinned')) {
+        upper.style.opacity = upperOpacity.toFixed(3);
+        upper.style.transform = `translate(-50%, -50%) scale(${(1 + 0.05 * (1 - upperOpacity)).toFixed(3)})`;
+        upper.style.pointerEvents = upperOpacity > 0.5 ? 'auto' : 'none';
+
+        lower.style.opacity = lowerOpacity.toFixed(3);
+        lower.style.transform = `translate(-50%, -50%) scale(${(0.95 + 0.05 * lowerOpacity).toFixed(3)})`;
+        lower.style.pointerEvents = lowerOpacity > 0.5 ? 'auto' : 'none';
+
+        if (narrative2) {
+          narrative2.style.opacity = narrative2Opacity.toFixed(3);
+          narrative2.style.transform = `translateY(${(6 * (1 - narrative2Opacity)).toFixed(1)}px)`;
+        }
+      }
       return;
     }
 
@@ -297,47 +389,108 @@ function updateScrollDrivenMorphs() {
     let narrative2Opacity = 0;
     let phase = '';
 
-    if (i === 0 && delta <= 0) {
-      // Cover starts already centered in focus
-      backingOpacity = 1;
-      textOpacity = 1;
-      charScale = 1;
-      upperOpacity = 1;
-      lowerOpacity = 0;
-      narrative2Opacity = 0;
-      phase = 'cover-focus';
-    } else if (delta < -D_APPROACH) {
-      // 1) Prior to page coming into focus: upper-art at 50%, backing & text hidden
+    // Cover page: starts with backing fade-in already complete; morphs to lower-art and shows narrative2, then fades out into outro
+    if (i === 0) {
+      if (delta <= D_COVER_PRE_LINGER) {
+        // Starts with backing solid white, text visible, upper-art full size (no intro, no scale up)
+        backingOpacity = 1;
+        textOpacity = 1;
+        charScale = 1;
+        upperOpacity = 1;
+        lowerOpacity = 0;
+        narrative2Opacity = 0;
+        phase = 'cover-in-focus';
+      } else if (delta < D_COVER_PRE_LINGER + D_COVER_MORPH) {
+        // Morph: upper-art morphs to lower-art, narrative2 appears
+        const rawMorph = (delta - D_COVER_PRE_LINGER) / D_COVER_MORPH;
+        const smoothMorph = Math.sin((rawMorph * Math.PI) / 2);
+        backingOpacity = 1;
+        textOpacity = 1;
+        charScale = 1;
+        upperOpacity = 1 - smoothMorph;
+        lowerOpacity = smoothMorph;
+        narrative2Opacity = smoothMorph;
+        phase = 'morphing';
+      } else if (delta < D_COVER_PRE_LINGER + D_COVER_MORPH + D_COVER_POST_LINGER) {
+        // Post-morph linger: lower-art and narrative2 in full focus
+        backingOpacity = 1;
+        textOpacity = 1;
+        charScale = 1;
+        upperOpacity = 0;
+        lowerOpacity = 1;
+        narrative2Opacity = 1;
+        phase = 'post-linger';
+      } else if (delta < D_COVER_TOTAL) {
+        // Backing fade-out (backing & narrative2/text fade out, lower-art scales to 50%)
+        const rawOutro = (delta - (D_COVER_PRE_LINGER + D_COVER_MORPH + D_COVER_POST_LINGER)) / D_COVER_FADE_OUT;
+        const smoothOutro = Math.sin((rawOutro * Math.PI) / 2);
+        backingOpacity = 1 - smoothOutro;
+        textOpacity = 1 - smoothOutro;
+        charScale = 1.0 - 0.5 * smoothOutro;
+        upperOpacity = 0;
+        lowerOpacity = 1;
+        narrative2Opacity = 1 - smoothOutro;
+        phase = 'cover-fade-out';
+      } else {
+        // Outro (pinning released at D_COVER_TOTAL, lower-art at 50% miniature scrolls out of view)
+        backingOpacity = 0;
+        textOpacity = 0;
+        charScale = 0.5;
+        upperOpacity = 0;
+        lowerOpacity = 1;
+        narrative2Opacity = 0;
+        phase = 'outro';
+      }
+
+      scene.style.setProperty('--backing-opacity', backingOpacity.toFixed(3));
+      scene.style.setProperty('--text-opacity', textOpacity.toFixed(3));
+      scene.style.setProperty('--char-scale', charScale.toFixed(3));
+
+      if (morphTarget) {
+        if (phase) morphTarget.setAttribute('data-phase', phase);
+        else morphTarget.removeAttribute('data-phase');
+      }
+
+      if (upper && lower && !morphTarget?.classList.contains('is-pinned')) {
+        upper.style.opacity = upperOpacity.toFixed(3);
+        upper.style.transform = `translate(-50%, -50%) scale(${(1 + 0.05 * (1 - upperOpacity)).toFixed(3)})`;
+        upper.style.pointerEvents = upperOpacity > 0.5 ? 'auto' : 'none';
+
+        lower.style.opacity = lowerOpacity.toFixed(3);
+        lower.style.transform = `translate(-50%, -50%) scale(${(0.95 + 0.05 * lowerOpacity).toFixed(3)})`;
+        lower.style.pointerEvents = lowerOpacity > 0.5 ? 'auto' : 'none';
+
+        if (narrative2) {
+          narrative2.style.opacity = narrative2Opacity.toFixed(3);
+          narrative2.style.transform = `translateY(${(6 * (1 - narrative2Opacity)).toFixed(1)}px)`;
+        }
+      }
+      return;
+    }
+
+    if (delta < 0) {
+      // 1) Intro: upper-art is at 50% as it is scrolled to the centre of the screen
       backingOpacity = 0;
       textOpacity = 0;
       charScale = 0.5;
       upperOpacity = 1;
       lowerOpacity = 0;
       narrative2Opacity = 0;
-      phase = 'approaching-distant';
-    } else if (delta < 0) {
-      // 2a) Approaching center: upper-art scales to full size, backing & text fade in
-      const progressIn = (delta + D_APPROACH) / D_APPROACH;
-      const smoothIn = Math.sin((progressIn * Math.PI) / 2);
+      phase = 'intro';
+    } else if (delta < D_FADE_IN) {
+      // 2) Backing fade-in: backing fades in, once centred, page is pinned
+      const p = delta / D_FADE_IN;
+      const smoothIn = Math.sin((p * Math.PI) / 2);
       backingOpacity = smoothIn;
       textOpacity = smoothIn;
       charScale = 0.5 + 0.5 * smoothIn;
       upperOpacity = 1;
       lowerOpacity = 0;
       narrative2Opacity = 0;
-      phase = 'approaching';
-    } else if (delta < D_LINGER_1) {
-      // 2b) Scrolled to center in focus: upper-art 100%, backing 1.0, text 1.0
-      backingOpacity = 1;
-      textOpacity = 1;
-      charScale = 1;
-      upperOpacity = 1;
-      lowerOpacity = 0;
-      narrative2Opacity = 0;
-      phase = 'pre-linger';
-    } else if (delta < D_LINGER_1 + D_MORPH) {
-      // 3a) Morph upper-art to lower-art and reveal story-narrative-2
-      const rawMorph = (delta - D_LINGER_1) / D_MORPH;
+      phase = 'backing-fade-in';
+    } else if (delta < D_FADE_IN + D_MORPH) {
+      // 3) Morph: once backing is fully solid, morph to lower-art and show narrative2
+      const rawMorph = (delta - D_FADE_IN) / D_MORPH;
       const smoothMorph = Math.sin((rawMorph * Math.PI) / 2);
       backingOpacity = 1;
       textOpacity = 1;
@@ -346,8 +499,8 @@ function updateScrollDrivenMorphs() {
       lowerOpacity = smoothMorph;
       narrative2Opacity = smoothMorph;
       phase = 'morphing';
-    } else if (delta < D_LINGER_1 + D_MORPH + D_LINGER_2) {
-      // 3b) Lower-art & story-narrative-2 registered in full focus
+    } else if (delta < D_FADE_IN + D_MORPH + D_LINGER) {
+      // 3b) Lower-art & narrative2 registered in full focus
       backingOpacity = 1;
       textOpacity = 1;
       charScale = 1;
@@ -356,8 +509,8 @@ function updateScrollDrivenMorphs() {
       narrative2Opacity = 1;
       phase = 'post-linger';
     } else if (delta < D_TOTAL) {
-      // 4) Backing & text fade out, lower-art scales down to 50%
-      const rawOutro = (delta - (D_LINGER_1 + D_MORPH + D_LINGER_2)) / D_OUTRO;
+      // 4) Backing fade-out: backing fades out, pinning released
+      const rawOutro = (delta - (D_FADE_IN + D_MORPH + D_LINGER)) / D_FADE_OUT;
       const smoothOutro = Math.sin((rawOutro * Math.PI) / 2);
       backingOpacity = 1 - smoothOutro;
       textOpacity = 1 - smoothOutro;
@@ -365,16 +518,16 @@ function updateScrollDrivenMorphs() {
       upperOpacity = 0;
       lowerOpacity = 1;
       narrative2Opacity = 1 - smoothOutro;
-      phase = 'outro';
+      phase = 'backing-fade-out';
     } else {
-      // Page pinning lifted to move on: 50% lower-art avatar moving along landscape
+      // 5) Outro: lower-art scales down to 50% and scrolls out of view
       backingOpacity = 0;
       textOpacity = 0;
       charScale = 0.5;
       upperOpacity = 0;
       lowerOpacity = 1;
       narrative2Opacity = 0;
-      phase = 'unpinned';
+      phase = 'outro';
     }
 
     scene.style.setProperty('--backing-opacity', backingOpacity.toFixed(3));
