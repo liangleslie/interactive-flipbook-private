@@ -31,9 +31,9 @@ function renderDeckDOM() {
       return `
         <section class="story-card card-cover ${i === 0 ? 'is-active' : 'is-next'}" data-index="${i}">
           <div>
-            <span class="cover-badge">${page.text1 || page.badge || 'Story Cards'}</span>
+            <span class="cover-badge">${page.chapterTag || page.text1 || 'Story Cards'}</span>
             <h1 class="hero-title">${page.title}</h1>
-            <p class="story-subtitle">${page.text2 || page.subtitle || ''}</p>
+            <p class="story-subtitle">${page.narrative || page.text2 || ''}</p>
           </div>
 
           <div class="illustration-stage">
@@ -47,7 +47,7 @@ function renderDeckDOM() {
           </div>
 
           <div>
-            <p class="deck-instruction">${page.caption || 'Tap right to flip card • Tap art to lift flap'}</p>
+            <p class="deck-instruction">${page.narrative2 || page.caption || 'Tap right to flip card • Tap art to lift flap'}</p>
           </div>
         </section>
       `;
@@ -57,9 +57,9 @@ function renderDeckDOM() {
       return `
         <section class="story-card card-end ${i === 0 ? 'is-active' : ''}" data-index="${i}">
           <div>
-            <span class="end-ribbon">${page.text1 || page.ribbon || 'Special Edition'}</span>
+            <span class="end-ribbon">${page.chapterTag || page.text1 || 'Special Edition'}</span>
             <h2 class="end-title">${page.title}</h2>
-            <p class="end-message">${page.text2 || page.narrative || ''}</p>
+            <p class="end-message">${page.narrative || page.text2 || ''}</p>
           </div>
 
           <div class="illustration-stage">
@@ -82,13 +82,13 @@ function renderDeckDOM() {
     return `
       <section class="story-card card-story ${i === 0 ? 'is-active' : (i === 1 ? 'is-next' : 'is-next-2')}" data-index="${i}">
         <div class="card-meta-row">
-          <span class="chapter-badge">${page.text1 || page.chapterTag || `Chapter ${page.pageNumber}`}</span>
+          <span class="chapter-badge">${page.chapterTag || page.text1 || `Chapter ${page.pageNumber}`}</span>
           <span class="card-num">${String(page.pageNumber || i).padStart(2, '0')}</span>
         </div>
 
         <div>
           <h2 class="card-heading">${page.title}</h2>
-          <p class="card-narrative">${page.text2 || page.narrative || ''}</p>
+          <p class="card-narrative">${page.narrative || page.text2 || ''}</p>
         </div>
 
         <div class="illustration-stage">
@@ -102,7 +102,7 @@ function renderDeckDOM() {
         </div>
 
         <div>
-          <p class="deck-instruction">${page.caption || 'Tap illustration to peek inside'}</p>
+          <p class="deck-instruction">${page.narrative2 || page.caption || 'Tap illustration to peek inside'}</p>
         </div>
       </section>
     `;

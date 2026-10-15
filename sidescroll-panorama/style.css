@@ -8,7 +8,7 @@
   --glass-border: rgba(255, 255, 255, 0.7);
   --station-width: clamp(320px, 80vw, 540px);
   --station-gap: clamp(900px, 115vw, 1500px);
-  --pin-distance: 840px;
+  --pin-distance: 860px;
 }
 
 * {
@@ -441,9 +441,8 @@ body {
   left: calc(50vw - var(--station-width) / 2);
   width: var(--station-width);
   max-width: var(--station-width);
-  background: #ffffff;
+  background: transparent;
   border-radius: 28px;
-  box-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.06);
   padding: 1.5rem 1.25rem;
   display: flex;
   flex-direction: column;
@@ -451,6 +450,20 @@ body {
   justify-content: center;
   flex-shrink: 0;
   box-sizing: border-box;
+  position: relative;
+}
+
+.station-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  border-radius: 28px;
+  box-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.06);
+  opacity: var(--backing-opacity, 1);
+  pointer-events: none;
+  z-index: 0;
+  will-change: opacity;
 }
 
 .station-flow {
@@ -460,6 +473,14 @@ body {
   text-align: center;
   width: 100%;
   gap: 0.65rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Backing and text fade together on approach and outro */
+.station-flow > *:not(.character-spot, .story-narrative-2) {
+  opacity: var(--text-opacity, 1);
+  will-change: opacity;
 }
 
 /* Typography with soft text shadow for open-world legibility */
@@ -569,7 +590,6 @@ body {
   text-align: center;
   opacity: 0;
   transform: translateY(6px);
-  transition: opacity 0.25s ease-out, transform 0.25s ease-out;
   min-height: 1.4em;
   margin-top: 0.2rem;
   will-change: opacity, transform;
@@ -580,6 +600,7 @@ body {
 .character-morph-target.is-pinned ~ .story-narrative-2 {
   opacity: 1 !important;
   transform: translateY(0) !important;
+  transition: opacity 0.25s ease-out, transform 0.25s ease-out;
 }
 
 .story-caption {
@@ -611,6 +632,9 @@ body {
   cursor: pointer;
   border-radius: 20px;
   user-select: none;
+  transform: scale(var(--char-scale, 1));
+  transform-origin: center center;
+  will-change: transform;
 }
 
 .character-img {

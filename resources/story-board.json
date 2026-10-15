@@ -5,18 +5,16 @@
     {
       "id": "cover",
       "type": "cover",
+      "pageNumber": 0,
       "navLabel": "Start",
       "title": "Sherry & Friends",
-      "text1": "Special Edition",
-      "text2": "A Tale of Fun & Friendship",
-      "badge": "Special Edition",
-      "subtitle": "A Tale of Fun & Friendship",
-      "narrative": "A Magical Tale of Fun & Friendship",
+      "chapterTag": "Special Edition",
+      "narrative": "A Tale of Fun & Friendship",
+      "narrative2": "With a flutter of fairy wings and a sprinkle of stardust, the journey begins!",
       "upperArt": "../resources/png/sg-1.png",
       "lowerArt": "../resources/png/sg-2.png",
       "characterName": "Sherry",
-      "cue": "Tap to open ➔",
-      "caption": "Tap illustration to peek inside"
+      "cue": "Scroll along the path ➔"
     },
     {
       "id": "page-1",
@@ -24,15 +22,13 @@
       "pageNumber": 1,
       "navLabel": "1: Ed",
       "title": "Meet Ed!",
-      "text1": "Chapter One",
-      "text2": "Once upon a sunny afternoon, Ed was full of cheerful ideas and ready to explore.",
       "chapterTag": "Chapter One",
       "narrative": "Once upon a sunny afternoon, Ed was full of cheerful ideas and ready to explore.",
+      "narrative2": "Surprise! Ed became a brave safari ranger, making friends with a giant friendly python!",
       "upperArt": "../resources/jpg/ed-1.jpg",
       "lowerArt": "../resources/jpg/ed-2.jpg",
       "characterName": "Ed",
-      "cue": "Scroll for next chapter ▼",
-      "caption": "Tap Ed to see what happens!"
+      "cue": "Scroll along the path ➔"
     },
     {
       "id": "page-2",
@@ -40,15 +36,13 @@
       "pageNumber": 2,
       "navLabel": "2: Leslie",
       "title": "Meet Leslie!",
-      "text1": "Chapter Two",
-      "text2": "Leslie joined in with curious gadgets and big smiles, ready for the adventure ahead.",
       "chapterTag": "Chapter Two",
       "narrative": "Leslie joined in with curious gadgets and big smiles, ready for the adventure ahead.",
+      "narrative2": "Ta-da! Leslie unveiled a mountain of magical treats and sparkling gadgets for everyone to share!",
       "upperArt": "../resources/png/les-1.png",
       "lowerArt": "../resources/png/les-2.png",
       "characterName": "Leslie",
-      "cue": "Scroll to reach the end ▼",
-      "caption": "Tap Leslie to see what happens!"
+      "cue": "Scroll along the path ➔"
     },
     {
       "id": "page-end",
@@ -56,17 +50,13 @@
       "pageNumber": 3,
       "navLabel": "The End",
       "title": "The End ✨",
-      "text1": "To Sherry With Love",
-      "text2": "Thank you for joining our magical tale! Happy memories and laughter forever.",
-      "badge": "Special Edition",
-      "ribbon": "To Sherry With Love",
-      "subtitle": "Made with love for Sherry.",
+      "chapterTag": "To Sherry With Love",
       "narrative": "Thank you for joining our magical tale! Happy memories and laughter forever.",
+      "narrative2": "And so their great adventure blossomed into forever friendships and joyful smiles!",
       "upperArt": "../resources/png/sg-1.png",
       "lowerArt": "../resources/png/sg-2.png",
       "characterName": "Sherry",
-      "cue": "Scroll back to revisit ↺",
-      "caption": "...and they all lived happily ever after!"
+      "cue": "Scroll back to revisit ↺"
     }
   ]
 }

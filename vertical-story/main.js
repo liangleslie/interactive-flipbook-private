@@ -26,9 +26,9 @@ function renderVerticalFeedDOM() {
       return `
         <section class="feed-section section-cover" id="section-${i}" data-index="${i}">
           <div>
-            <span class="cover-badge">${page.text1 || page.badge || 'Vertical Feed'}</span>
+            <span class="cover-badge">${page.chapterTag || page.text1 || 'Vertical Feed'}</span>
             <h1 class="hero-title">${page.title}</h1>
-            <p class="story-subtitle">${page.text2 || page.subtitle || ''}</p>
+            <p class="story-subtitle">${page.narrative || page.text2 || ''}</p>
           </div>
 
           <div class="illustration-container">
@@ -52,9 +52,9 @@ function renderVerticalFeedDOM() {
       return `
         <section class="feed-section section-end" id="section-${i}" data-index="${i}">
           <div>
-            <span class="end-ribbon">${page.text1 || page.ribbon || 'With Love'}</span>
+            <span class="end-ribbon">${page.chapterTag || page.text1 || 'With Love'}</span>
             <h2 class="end-title">${page.title}</h2>
-            <p class="end-narrative">${page.text2 || page.narrative || ''}</p>
+            <p class="end-narrative">${page.narrative || page.text2 || ''}</p>
           </div>
 
           <div class="illustration-container">
@@ -77,13 +77,13 @@ function renderVerticalFeedDOM() {
     return `
       <section class="feed-section section-story" id="section-${i}" data-index="${i}">
         <div class="section-meta-row">
-          <span class="chapter-tag">${page.text1 || page.chapterTag || `Chapter ${page.pageNumber}`}</span>
+          <span class="chapter-tag">${page.chapterTag || page.text1 || `Chapter ${page.pageNumber}`}</span>
           <span class="page-indicator">${String(page.pageNumber || i).padStart(2, '0')}</span>
         </div>
 
         <div>
           <h2 class="section-heading">${page.title}</h2>
-          <p class="section-narrative">${page.text2 || page.narrative || ''}</p>
+          <p class="section-narrative">${page.narrative || page.text2 || ''}</p>
         </div>
 
         <div class="illustration-container">

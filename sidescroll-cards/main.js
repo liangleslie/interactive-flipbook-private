@@ -27,7 +27,7 @@ function renderSidescrollCardsDOM() {
       return `
         <section class="strip-card card-cover card-front-cover is-active" data-index="${i}" id="card-${i}">
           <div class="card-inner cover-inner">
-            <span class="cover-badge">${page.text1 || page.badge || 'Special Edition'}</span>
+            <span class="cover-badge">${page.chapterTag || page.text1 || 'Special Edition'}</span>
             <h2 class="cover-title">${page.title}</h2>
             <div class="cover-art">
               <img src="${page.lowerArt}" alt="${page.characterName || 'Hero'} lower" class="character-hero lower-art" />
@@ -35,7 +35,7 @@ function renderSidescrollCardsDOM() {
                 <img src="${page.upperArt}" alt="${page.characterName || 'Hero'} upper" class="character-hero upper-art" />
               </div>
             </div>
-            <p class="cover-author">${page.text2 || page.subtitle || ''}</p>
+            <p class="cover-author">${page.narrative || page.text2 || ''}</p>
             <div class="cover-tap-hint">${page.cue || 'Swipe sideways to explore ➔'}</div>
           </div>
         </section>
@@ -48,7 +48,7 @@ function renderSidescrollCardsDOM() {
           <div class="card-inner cover-inner back-inner">
             <div class="back-logo">🌟</div>
             <h2 class="back-title">${page.title}</h2>
-            <p class="back-author">${page.text2 || page.narrative || ''}</p>
+            <p class="back-author">${page.narrative || page.text2 || ''}</p>
             <div class="back-footer">
               <span>Sidescrolling Storybook</span>
             </div>
@@ -63,17 +63,17 @@ function renderSidescrollCardsDOM() {
         <div class="card-inner story-content">
           <div class="card-badge-row">
             <span class="page-number">${page.pageNumber || i}</span>
-            <span class="card-chapter-tag">${page.text1 || page.chapterTag || `Chapter ${page.pageNumber}`}</span>
+            <span class="card-chapter-tag">${page.chapterTag || page.text1 || `Chapter ${page.pageNumber}`}</span>
           </div>
           <h2 class="story-title">${page.title}</h2>
-          <p class="story-narrative">${page.text2 || page.narrative || ''}</p>
+          <p class="story-narrative">${page.narrative || page.text2 || ''}</p>
           <div class="page-illustration">
             <img src="${page.lowerArt}" alt="${page.characterName || 'Hero'} lower" class="story-img lower-art" />
             <div class="upper-wrapper" title="Tap to lift flap">
               <img src="${page.upperArt}" alt="${page.characterName || 'Hero'} upper" class="story-img upper-art" />
             </div>
           </div>
-          <p class="story-caption">${page.caption || 'Tap illustration to lift flap'}</p>
+          <p class="story-caption">${page.narrative2 || page.caption || 'Tap illustration to lift flap'}</p>
         </div>
       </section>
     `;

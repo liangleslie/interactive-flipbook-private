@@ -41,9 +41,9 @@ function renderPanoramaDOM() {
         <section class="scene-station scene-start" id="scene-${i}" data-index="${i}">
           <div class="station-card">
             <div class="station-flow">
-              <span class="scene-badge">${page.text1 || page.badge || 'Special Edition'}</span>
+              <span class="scene-badge">${page.chapterTag || page.text1 || 'Special Edition'}</span>
               <h1 class="hero-title">${page.title}</h1>
-              <p class="story-subtitle">${page.text2 || page.subtitle || ''}</p>
+              <p class="story-subtitle">${page.narrative || page.text2 || ''}</p>
 
               <div class="character-spot">
                 <div class="character-morph-target" data-index="${i}" title="Tap or scroll to morph">
@@ -51,6 +51,8 @@ function renderPanoramaDOM() {
                   <img src="${page.upperArt}" alt="${page.characterName || 'Hero'} cover" class="character-img upper-art" />
                 </div>
               </div>
+
+              <p class="story-narrative-2">${page.narrative2 || page.caption || ''}</p>
 
               <div class="scroll-cue">
                 <span>${page.cue || 'Scroll along the path ➔'}</span>
@@ -68,8 +70,8 @@ function renderPanoramaDOM() {
             <div class="station-flow end-flow">
               <div class="end-star">🌟</div>
               <h2 class="end-heading">${page.title}</h2>
-              <p class="end-dedication">${page.text2 || page.narrative || ''}</p>
-              <div class="end-tag">${page.text1 || page.ribbon || 'Continuous Story Panorama'}</div>
+              <p class="end-dedication">${page.narrative || page.text2 || ''}</p>
+              <div class="end-tag">${page.chapterTag || page.text1 || 'Continuous Story Panorama'}</div>
             </div>
           </div>
         </section>
@@ -83,10 +85,10 @@ function renderPanoramaDOM() {
           <div class="station-flow">
             <div class="chapter-badge-row">
               <span class="page-number">${page.pageNumber || i}</span>
-              <span class="chapter-tag">${page.text1 || page.chapterTag || `Chapter ${page.pageNumber}`}</span>
+              <span class="chapter-tag">${page.chapterTag || page.text1 || `Chapter ${page.pageNumber}`}</span>
             </div>
             <h2 class="scene-heading">${page.title}</h2>
-            <p class="scene-narrative">${page.text2 || page.narrative || ''}</p>
+            <p class="scene-narrative">${page.narrative || page.text2 || ''}</p>
 
             <div class="character-spot">
               <div class="character-morph-target" data-index="${i}" title="Tap or scroll to morph">
@@ -111,11 +113,13 @@ const morphTargets = Array.from(document.querySelectorAll('.character-morph-targ
 
 let currentSceneIndex = 0;
 
-// Pronounced scroll-pin budget for each character station (in pixels of scroll delta)
-const D_PRE = 260;    // Phase 1: Pronounced pre-morph linger at center (stationary, upper-art registered)
-const D_MORPH = 320;  // Phase 2: Gradual deliberate morph while stationary at center (upper-art -> lower-art)
-const D_POST = 260;   // Phase 3: Pronounced post-morph linger at center (stationary, lower-art registered)
-const D_TOTAL = D_PRE + D_MORPH + D_POST; // 840px total stationary window
+// 4-Phase Animation Budget (in pixels of scroll delta)
+const D_APPROACH = 280; // Phase 0: Approach to center (upper-art 50% -> 100%, backing/text 0 -> 1)
+const D_LINGER_1 = 140; // Phase 1: Center in-focus linger (upper-art 100%, backing/text 1, narrative2 0)
+const D_MORPH = 320;    // Phase 2: Morph upper-art -> lower-art & reveal story-narrative-2
+const D_LINGER_2 = 140; // Phase 3: Post-morph linger (lower-art 100%, story-narrative-2 1)
+const D_OUTRO = 260;    // Phase 4: Backing & text fade out (1 -> 0), lower-art scales down to 50% (1.0 -> 0.5)
+const D_TOTAL = D_LINGER_1 + D_MORPH + D_LINGER_2 + D_OUTRO; // 860px total pinned window
 
 function updateSceneUI(idx) {
   currentSceneIndex = idx;
@@ -155,27 +159,22 @@ function getSceneCenterScroll(idx) {
   if (idx === scenes.length - 1) {
     return Math.max(0, viewport.scrollWidth - viewport.clientWidth);
   }
-  // Scroll to scene pin start plus pre-linger so character is centered & ready to morph
+  // Scroll to scene pin start plus pre-linger so character is centered in focus & ready to morph
   const pinStart = getScenePinStart(idx);
   const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
-  return Math.min(pinStart + D_PRE, maxScroll);
+  return Math.min(pinStart + Math.round(D_LINGER_1 / 2), maxScroll);
 }
 window.getSceneCenterScroll = getSceneCenterScroll;
 
 function getActiveSceneIndex(S) {
-  const S0 = getScenePinStart(0);
-  const S1 = getScenePinStart(1);
-  const S2 = getScenePinStart(2);
-  const S3 = getScenePinStart(3);
-
-  const T01 = (S0 + D_TOTAL + S1) / 2;
-  const T12 = (S1 + D_TOTAL + S2) / 2;
-  const T23 = (S2 + D_TOTAL + S3) / 2;
-
-  if (S < T01) return 0;
-  if (S < T12) return 1;
-  if (S < T23) return 2;
-  return 3;
+  if (scenes.length <= 1) return 0;
+  for (let i = 0; i < scenes.length - 1; i++) {
+    const Si = getScenePinStart(i);
+    const Snext = getScenePinStart(i + 1);
+    const midpoint = (Si + D_TOTAL + Snext) / 2;
+    if (S < midpoint) return i;
+  }
+  return scenes.length - 1;
 }
 window.getActiveSceneIndex = getActiveSceneIndex;
 
@@ -260,54 +259,145 @@ function updateScrollDrivenMorphs() {
     spriteLayer.style.transform = `translateX(${visualBgX}px)`;
   }
 
-  // Native position:sticky keeps .station-flow pinned smoothly on compositor thread.
-  // JS now only drives the character opacity cross-dissolve & phase attributes.
+  // Drive 4-phase animations:
+  // 1) Prior to focus: upper-art at 50%, backing & text hidden
+  // 2) Scrolled to center in focus: upper-art 100%, backing & text fade in (1.0)
+  // 3) Continue scrolling: upper-art morphs to lower-art, story-narrative-2 appears
+  // 4) Continue scrolling: backing & text fade out, lower-art scales down to 50%, pinning lifted
   scenes.forEach((scene, i) => {
     const morphTarget = scene.querySelector('.character-morph-target');
     const upper = scene.querySelector('.character-morph-target .upper-art');
     const lower = scene.querySelector('.character-morph-target .lower-art');
-
-    if (i >= scenes.length - 1) return;
+    const narrative2 = scene.querySelector('.story-narrative-2');
 
     const S_pin = getScenePinStart(i);
     const delta = S - S_pin;
 
-    let morphProgress = 0;
+    // For end scene (no morph target, dedication card)
+    if (i === scenes.length - 1) {
+      let endOpacity = 1;
+      if (delta < -D_APPROACH) {
+        endOpacity = 0;
+      } else if (delta < 0) {
+        const p = (delta + D_APPROACH) / D_APPROACH;
+        endOpacity = Math.sin((p * Math.PI) / 2);
+      } else {
+        endOpacity = 1;
+      }
+      scene.style.setProperty('--backing-opacity', endOpacity.toFixed(3));
+      scene.style.setProperty('--text-opacity', endOpacity.toFixed(3));
+      return;
+    }
+
+    let backingOpacity = 1;
+    let textOpacity = 1;
+    let charScale = 1;
+    let upperOpacity = 1;
+    let lowerOpacity = 0;
+    let narrative2Opacity = 0;
     let phase = '';
 
-    if (delta < 0) {
-      morphProgress = 0;
-    } else if (delta < D_PRE) {
-      morphProgress = 0;
+    if (i === 0 && delta <= 0) {
+      // Cover starts already centered in focus
+      backingOpacity = 1;
+      textOpacity = 1;
+      charScale = 1;
+      upperOpacity = 1;
+      lowerOpacity = 0;
+      narrative2Opacity = 0;
+      phase = 'cover-focus';
+    } else if (delta < -D_APPROACH) {
+      // 1) Prior to page coming into focus: upper-art at 50%, backing & text hidden
+      backingOpacity = 0;
+      textOpacity = 0;
+      charScale = 0.5;
+      upperOpacity = 1;
+      lowerOpacity = 0;
+      narrative2Opacity = 0;
+      phase = 'approaching-distant';
+    } else if (delta < 0) {
+      // 2a) Approaching center: upper-art scales to full size, backing & text fade in
+      const progressIn = (delta + D_APPROACH) / D_APPROACH;
+      const smoothIn = Math.sin((progressIn * Math.PI) / 2);
+      backingOpacity = smoothIn;
+      textOpacity = smoothIn;
+      charScale = 0.5 + 0.5 * smoothIn;
+      upperOpacity = 1;
+      lowerOpacity = 0;
+      narrative2Opacity = 0;
+      phase = 'approaching';
+    } else if (delta < D_LINGER_1) {
+      // 2b) Scrolled to center in focus: upper-art 100%, backing 1.0, text 1.0
+      backingOpacity = 1;
+      textOpacity = 1;
+      charScale = 1;
+      upperOpacity = 1;
+      lowerOpacity = 0;
+      narrative2Opacity = 0;
       phase = 'pre-linger';
-    } else if (delta < D_PRE + D_MORPH) {
-      const raw = (delta - D_PRE) / D_MORPH;
-      morphProgress = Math.sin((raw * Math.PI) / 2);
+    } else if (delta < D_LINGER_1 + D_MORPH) {
+      // 3a) Morph upper-art to lower-art and reveal story-narrative-2
+      const rawMorph = (delta - D_LINGER_1) / D_MORPH;
+      const smoothMorph = Math.sin((rawMorph * Math.PI) / 2);
+      backingOpacity = 1;
+      textOpacity = 1;
+      charScale = 1;
+      upperOpacity = 1 - smoothMorph;
+      lowerOpacity = smoothMorph;
+      narrative2Opacity = smoothMorph;
       phase = 'morphing';
-    } else if (delta < D_TOTAL) {
-      morphProgress = 1;
+    } else if (delta < D_LINGER_1 + D_MORPH + D_LINGER_2) {
+      // 3b) Lower-art & story-narrative-2 registered in full focus
+      backingOpacity = 1;
+      textOpacity = 1;
+      charScale = 1;
+      upperOpacity = 0;
+      lowerOpacity = 1;
+      narrative2Opacity = 1;
       phase = 'post-linger';
+    } else if (delta < D_TOTAL) {
+      // 4) Backing & text fade out, lower-art scales down to 50%
+      const rawOutro = (delta - (D_LINGER_1 + D_MORPH + D_LINGER_2)) / D_OUTRO;
+      const smoothOutro = Math.sin((rawOutro * Math.PI) / 2);
+      backingOpacity = 1 - smoothOutro;
+      textOpacity = 1 - smoothOutro;
+      charScale = 1.0 - 0.5 * smoothOutro;
+      upperOpacity = 0;
+      lowerOpacity = 1;
+      narrative2Opacity = 1 - smoothOutro;
+      phase = 'outro';
     } else {
-      morphProgress = 1;
+      // Page pinning lifted to move on: 50% lower-art avatar moving along landscape
+      backingOpacity = 0;
+      textOpacity = 0;
+      charScale = 0.5;
+      upperOpacity = 0;
+      lowerOpacity = 1;
+      narrative2Opacity = 0;
+      phase = 'unpinned';
     }
+
+    scene.style.setProperty('--backing-opacity', backingOpacity.toFixed(3));
+    scene.style.setProperty('--text-opacity', textOpacity.toFixed(3));
+    scene.style.setProperty('--char-scale', charScale.toFixed(3));
 
     if (morphTarget) {
       if (phase) morphTarget.setAttribute('data-phase', phase);
       else morphTarget.removeAttribute('data-phase');
     }
 
-    const narrative2 = scene.querySelector('.story-narrative-2');
-
     if (upper && lower && !morphTarget?.classList.contains('is-pinned')) {
-      upper.style.opacity = (1 - morphProgress).toFixed(3);
-      upper.style.transform = `translate(-50%, -50%) scale(${(1 + 0.05 * morphProgress).toFixed(3)})`;
+      upper.style.opacity = upperOpacity.toFixed(3);
+      upper.style.transform = `translate(-50%, -50%) scale(${(1 + 0.05 * (1 - upperOpacity)).toFixed(3)})`;
+      upper.style.pointerEvents = upperOpacity > 0.5 ? 'auto' : 'none';
 
-      lower.style.opacity = morphProgress.toFixed(3);
-      lower.style.transform = `translate(-50%, -50%) scale(${(0.95 + 0.05 * morphProgress).toFixed(3)})`;
+      lower.style.opacity = lowerOpacity.toFixed(3);
+      lower.style.transform = `translate(-50%, -50%) scale(${(0.95 + 0.05 * lowerOpacity).toFixed(3)})`;
+      lower.style.pointerEvents = lowerOpacity > 0.5 ? 'auto' : 'none';
 
       if (narrative2) {
-        narrative2.style.opacity = morphProgress.toFixed(3);
-        narrative2.style.transform = `translateY(${(6 * (1 - morphProgress)).toFixed(1)}px)`;
+        narrative2.style.opacity = narrative2Opacity.toFixed(3);
+        narrative2.style.transform = `translateY(${(6 * (1 - narrative2Opacity)).toFixed(1)}px)`;
       }
     }
   });

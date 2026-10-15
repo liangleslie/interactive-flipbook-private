@@ -17,7 +17,7 @@ if (flipbookContainer) {
       return `
         <div class="c-flipbook__page page-cover page-front-cover">
           <div class="cover-inner">
-            <span class="cover-badge">${page.text1 || page.badge || 'Special Edition'}</span>
+            <span class="cover-badge">${page.chapterTag || page.text1 || 'Special Edition'}</span>
             <h2 class="cover-title">${page.title}</h2>
             <div class="cover-art">
               <img src="${page.lowerArt}" alt="${page.characterName || 'Hero'} lower" class="character-hero lower-art" />
@@ -25,7 +25,7 @@ if (flipbookContainer) {
                 <img src="${page.upperArt}" alt="${page.characterName || 'Hero'} upper" class="character-hero upper-art" />
               </div>
             </div>
-            <p class="cover-author">${page.text2 || page.subtitle || ''}</p>
+            <p class="cover-author">${page.narrative || page.text2 || ''}</p>
             <div class="cover-tap-hint">${page.cue || 'Tap to open ➔'}</div>
           </div>
         </div>
@@ -38,7 +38,7 @@ if (flipbookContainer) {
           <div class="cover-inner back-inner">
             <div class="back-logo">🌟</div>
             <h2>${page.title}</h2>
-            <p>${page.text2 || page.narrative || ''}</p>
+            <p>${page.narrative || page.text2 || ''}</p>
             <div class="back-footer">
               <span>flipbook-js</span>
             </div>
@@ -53,14 +53,14 @@ if (flipbookContainer) {
         <div class="story-content">
           <span class="page-number">${page.pageNumber || idx}</span>
           <h3>${page.title}</h3>
-          <p>${page.text2 || page.narrative || ''}</p>
+          <p>${page.narrative || page.text2 || ''}</p>
           <div class="page-illustration">
             <img src="${page.lowerArt}" alt="${page.characterName || 'Hero'} lower" class="story-img lower-art" />
             <div class="upper-wrapper">
               <img src="${page.upperArt}" alt="${page.characterName || 'Hero'} upper" class="story-img upper-art" />
             </div>
           </div>
-          <p class="story-caption">${page.caption || 'Tap to see what happens!'}</p>
+          <p class="story-caption">${page.narrative2 || page.caption || 'Tap to see what happens!'}</p>
         </div>
       </div>
     `;
