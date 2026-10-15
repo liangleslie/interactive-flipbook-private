@@ -17,9 +17,10 @@ function renderPanoramaDOM() {
   if (!panoramaWorld || !journeyTrack) return;
 
   // 1. Render landmark nodes inside #journey-track (keep existing journey-line)
+  const journeyInner = journeyTrack.querySelector('.journey-inner') || journeyTrack;
   const existingLine = journeyTrack.querySelector('.journey-line');
-  journeyTrack.innerHTML = '';
-  if (existingLine) journeyTrack.appendChild(existingLine);
+  journeyInner.innerHTML = '';
+  if (existingLine) journeyInner.appendChild(existingLine);
 
   pages.forEach((page, i) => {
     const node = document.createElement('button');
@@ -30,7 +31,7 @@ function renderPanoramaDOM() {
       <span class="node-dot"></span>
       <span class="node-label">${page.navLabel || `Scene ${i + 1}`}</span>
     `;
-    journeyTrack.appendChild(node);
+    journeyInner.appendChild(node);
   });
 
   // 2. Render scene stations in #panorama-world
@@ -38,20 +39,22 @@ function renderPanoramaDOM() {
     if (page.type === 'cover') {
       return `
         <section class="scene-station scene-start" id="scene-${i}" data-index="${i}">
-          <div class="station-flow">
-            <span class="scene-badge">${page.text1 || page.badge || 'Special Edition'}</span>
-            <h1 class="hero-title">${page.title}</h1>
-            <p class="story-subtitle">${page.text2 || page.subtitle || ''}</p>
+          <div class="station-card">
+            <div class="station-flow">
+              <span class="scene-badge">${page.text1 || page.badge || 'Special Edition'}</span>
+              <h1 class="hero-title">${page.title}</h1>
+              <p class="story-subtitle">${page.text2 || page.subtitle || ''}</p>
 
-            <div class="character-spot">
-              <div class="character-morph-target" data-index="${i}" title="Tap or scroll to morph">
-                <img src="${page.lowerArt}" alt="${page.characterName || 'Hero'} revealed" class="character-img lower-art" />
-                <img src="${page.upperArt}" alt="${page.characterName || 'Hero'} cover" class="character-img upper-art" />
+              <div class="character-spot">
+                <div class="character-morph-target" data-index="${i}" title="Tap or scroll to morph">
+                  <img src="${page.lowerArt}" alt="${page.characterName || 'Hero'} revealed" class="character-img lower-art" />
+                  <img src="${page.upperArt}" alt="${page.characterName || 'Hero'} cover" class="character-img upper-art" />
+                </div>
               </div>
-            </div>
 
-            <div class="scroll-cue">
-              <span>${page.cue || 'Scroll along the path ➔'}</span>
+              <div class="scroll-cue">
+                <span>${page.cue || 'Scroll along the path ➔'}</span>
+              </div>
             </div>
           </div>
         </section>
@@ -61,11 +64,13 @@ function renderPanoramaDOM() {
     if (page.type === 'end') {
       return `
         <section class="scene-station scene-end" id="scene-${i}" data-index="${i}">
-          <div class="station-flow end-flow">
-            <div class="end-star">🌟</div>
-            <h2 class="end-heading">${page.title}</h2>
-            <p class="end-dedication">${page.text2 || page.narrative || ''}</p>
-            <div class="end-tag">${page.text1 || page.ribbon || 'Continuous Story Panorama'}</div>
+          <div class="station-card">
+            <div class="station-flow end-flow">
+              <div class="end-star">🌟</div>
+              <h2 class="end-heading">${page.title}</h2>
+              <p class="end-dedication">${page.text2 || page.narrative || ''}</p>
+              <div class="end-tag">${page.text1 || page.ribbon || 'Continuous Story Panorama'}</div>
+            </div>
           </div>
         </section>
       `;
@@ -74,22 +79,24 @@ function renderPanoramaDOM() {
     // Story station
     return `
       <section class="scene-station scene-${page.id || i}" id="scene-${i}" data-index="${i}">
-        <div class="station-flow">
-          <div class="chapter-badge-row">
-            <span class="page-number">${page.pageNumber || i}</span>
-            <span class="chapter-tag">${page.text1 || page.chapterTag || `Chapter ${page.pageNumber}`}</span>
-          </div>
-          <h2 class="scene-heading">${page.title}</h2>
-          <p class="scene-narrative">${page.text2 || page.narrative || ''}</p>
-
-          <div class="character-spot">
-            <div class="character-morph-target" data-index="${i}" title="Tap or scroll to morph">
-              <img src="${page.lowerArt}" alt="${page.characterName || 'Hero'} inside" class="character-img lower-art" />
-              <img src="${page.upperArt}" alt="${page.characterName || 'Hero'} outside" class="character-img upper-art" />
+        <div class="station-card">
+          <div class="station-flow">
+            <div class="chapter-badge-row">
+              <span class="page-number">${page.pageNumber || i}</span>
+              <span class="chapter-tag">${page.text1 || page.chapterTag || `Chapter ${page.pageNumber}`}</span>
             </div>
-          </div>
+            <h2 class="scene-heading">${page.title}</h2>
+            <p class="scene-narrative">${page.text2 || page.narrative || ''}</p>
 
-          <p class="story-caption">${page.caption || 'Scrolling centers character & morphs into the story'}</p>
+            <div class="character-spot">
+              <div class="character-morph-target" data-index="${i}" title="Tap or scroll to morph">
+                <img src="${page.lowerArt}" alt="${page.characterName || 'Hero'} inside" class="character-img lower-art" />
+                <img src="${page.upperArt}" alt="${page.characterName || 'Hero'} outside" class="character-img upper-art" />
+              </div>
+            </div>
+
+            <p class="story-narrative-2">${page.narrative2 || page.caption || ''}</p>
+          </div>
         </div>
       </section>
     `;
@@ -119,7 +126,11 @@ function updateSceneUI(idx) {
   if (nextBtn) nextBtn.disabled = idx >= scenes.length - 1;
 
   landmarkNodes.forEach((node, i) => {
-    node.classList.toggle('is-active', i === idx);
+    const isActive = i === idx;
+    node.classList.toggle('is-active', isActive);
+    if (isActive) {
+      node.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
   });
 }
 
@@ -132,8 +143,8 @@ function getScenePinStart(idx) {
     return maxScroll;
   }
   const scene = scenes[idx];
-  const flow = scene.querySelector('.station-flow');
-  const stationWidth = flow ? flow.offsetWidth : (scene.offsetWidth || 440);
+  const card = scene.querySelector('.station-card') || scene.querySelector('.station-flow');
+  const stationWidth = card ? card.offsetWidth : (scene.offsetWidth || 440);
   const natural = Math.round(scene.offsetLeft - (viewport.clientWidth - stationWidth) / 2);
   return Math.min(Math.max(0, natural), maxScroll);
 }
@@ -285,12 +296,19 @@ function updateScrollDrivenMorphs() {
       else morphTarget.removeAttribute('data-phase');
     }
 
+    const narrative2 = scene.querySelector('.story-narrative-2');
+
     if (upper && lower && !morphTarget?.classList.contains('is-pinned')) {
       upper.style.opacity = (1 - morphProgress).toFixed(3);
       upper.style.transform = `translate(-50%, -50%) scale(${(1 + 0.05 * morphProgress).toFixed(3)})`;
 
       lower.style.opacity = morphProgress.toFixed(3);
       lower.style.transform = `translate(-50%, -50%) scale(${(0.95 + 0.05 * morphProgress).toFixed(3)})`;
+
+      if (narrative2) {
+        narrative2.style.opacity = morphProgress.toFixed(3);
+        narrative2.style.transform = `translateY(${(6 * (1 - morphProgress)).toFixed(1)}px)`;
+      }
     }
   });
 }
@@ -302,6 +320,8 @@ morphTargets.forEach((target) => {
     const isPinned = target.classList.toggle('is-pinned');
     const upper = target.querySelector('.upper-art');
     const lower = target.querySelector('.lower-art');
+    const scene = target.closest('.scene-station');
+    const narrative2 = scene?.querySelector('.story-narrative-2');
     if (!upper || !lower) return;
 
     if (isPinned) {
@@ -309,6 +329,10 @@ morphTargets.forEach((target) => {
       upper.style.transform = 'translate(-50%, -50%) scale(1.05)';
       lower.style.opacity = '1';
       lower.style.transform = 'translate(-50%, -50%) scale(1)';
+      if (narrative2) {
+        narrative2.style.opacity = '1';
+        narrative2.style.transform = 'translateY(0)';
+      }
     } else {
       updateScrollDrivenMorphs();
     }
@@ -347,18 +371,49 @@ viewport?.addEventListener('scroll', () => {
   }
 }, { passive: true });
 
+// Sync panorama dimensions with the image in index.html (adapting to any image width / aspect ratio)
+const backdropImg = document.getElementById('panorama-backdrop-img');
+const backdropLayer = document.querySelector('.panorama-backdrop-layer');
+
+function syncPanoramaDimensions() {
+  if (!backdropImg) return;
+  const nw = backdropImg.naturalWidth;
+  const nh = backdropImg.naturalHeight;
+  if (nw && nh) {
+    const aspect = nw / nh;
+    const computedWidth = Math.round(window.innerHeight * aspect);
+    document.documentElement.style.setProperty('--panorama-image-width', `${computedWidth}px`);
+    document.documentElement.style.setProperty('--panorama-aspect', `${aspect.toFixed(3)}`);
+  }
+  const currentSrc = backdropImg.getAttribute('src');
+  if (currentSrc && backdropLayer && !backdropLayer.style.backgroundImage) {
+    backdropLayer.style.setProperty('--panorama-bg', `url("${currentSrc}")`);
+  }
+}
+
+if (backdropImg) {
+  if (backdropImg.complete) {
+    syncPanoramaDimensions();
+  } else {
+    backdropImg.addEventListener('load', syncPanoramaDimensions);
+  }
+}
+
 if (viewport) viewport.scrollLeft = 0;
 updateSceneUI(0);
+syncPanoramaDimensions();
 handleScroll();
 updateScrollDrivenMorphs();
 
 window.addEventListener('load', () => {
   if (viewport) viewport.scrollLeft = 0;
+  syncPanoramaDimensions();
   handleScroll();
   updateScrollDrivenMorphs();
 });
 
 window.addEventListener('resize', () => {
+  syncPanoramaDimensions();
   handleScroll();
   updateScrollDrivenMorphs();
 });

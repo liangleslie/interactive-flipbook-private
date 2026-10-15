@@ -10,6 +10,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@400;600;800&display=swap"
     rel="stylesheet">
+  <link rel="preload" as="image" href="../resources/jpg/panorama_boardgame.jpeg" fetchpriority="high" />
   <link rel="stylesheet" href="./style.css" />
 </head>
 
@@ -21,15 +22,19 @@
 
       <!-- Continuous Journey Trail Tracker -->
       <div class="journey-track" id="journey-track">
-        <div class="journey-line">
-          <div class="journey-progress" id="journey-progress"></div>
+        <div class="journey-inner" id="journey-inner">
+          <div class="journey-line">
+            <div class="journey-progress" id="journey-progress"></div>
+          </div>
         </div>
       </div>
     </header>
 
     <!-- Fixed Environmental Landscape Backdrop (decoupled from scroll container to prevent blank space / scrollWidth inflation) -->
     <div class="panorama-backdrop-container" id="panorama-backdrop-container" aria-hidden="true">
-      <div class="panorama-backdrop-layer"></div>
+      <div class="panorama-backdrop-layer" id="panorama-backdrop-layer">
+        <img class="panorama-backdrop-img" id="panorama-backdrop-img" src="../resources/jpg/panorama_boardgame.jpeg" alt="Story Panorama Backdrop" />
+      </div>
       <div class="panorama-sky-tint"></div>
 
       <!-- Scripted Path Animated Sprites for Dynamic Liveliness -->
