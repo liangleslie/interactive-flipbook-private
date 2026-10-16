@@ -36,6 +36,7 @@ function renderSidescrollCardsDOM() {
               </div>
             </div>
             <p class="cover-author">${page.narrative || page.text2 || ''}</p>
+            <p class="story-narrative-2">${page.narrative2 || ''}</p>
             <div class="cover-tap-hint">${page.cue || 'Swipe sideways to explore ➔'}</div>
           </div>
         </section>
@@ -49,8 +50,15 @@ function renderSidescrollCardsDOM() {
             <div class="back-logo">🌟</div>
             <h2 class="back-title">${page.title}</h2>
             <p class="back-author">${page.narrative || page.text2 || ''}</p>
+            <div class="cover-art page-illustration">
+              <img src="${page.lowerArt}" alt="${page.characterName || 'Hero'} lower" class="character-hero lower-art" />
+              <div class="upper-wrapper" title="Tap to lift flap">
+                <img src="${page.upperArt}" alt="${page.characterName || 'Hero'} upper" class="character-hero upper-art" />
+              </div>
+            </div>
+            <p class="story-narrative-2">${page.narrative2 || ''}</p>
             <div class="back-footer">
-              <span>Sidescrolling Storybook</span>
+              <span>${page.chapterTag || 'Sidescrolling Storybook'}</span>
             </div>
           </div>
         </section>
@@ -73,7 +81,7 @@ function renderSidescrollCardsDOM() {
               <img src="${page.upperArt}" alt="${page.characterName || 'Hero'} upper" class="story-img upper-art" />
             </div>
           </div>
-          <p class="story-caption">${page.narrative2 || page.caption || 'Tap illustration to lift flap'}</p>
+          <p class="story-narrative-2">${page.narrative2 || ''}</p>
         </div>
       </section>
     `;
@@ -253,11 +261,15 @@ document.querySelectorAll('.cover-art, .page-illustration').forEach((container) 
   wrapper.addEventListener('click', (e) => {
     e.stopPropagation();
     wrapper.classList.add('is-hidden');
+    const card = container.closest('.strip-card');
+    card?.querySelector('.story-narrative-2')?.classList.add('is-visible');
   });
 
   lower.addEventListener('click', (e) => {
     e.stopPropagation();
     wrapper.classList.remove('is-hidden');
+    const card = container.closest('.strip-card');
+    card?.querySelector('.story-narrative-2')?.classList.remove('is-visible');
   });
 });
 

@@ -246,6 +246,26 @@ body {
   margin-bottom: 0.2rem;
 }
 
+.story-narrative-2 {
+  font-size: clamp(0.85rem, 2.2vw, 0.96rem);
+  line-height: 1.4;
+  color: #881337;
+  font-weight: 700;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  min-height: 1.4em;
+  margin: 0.2rem 0;
+}
+
+.feed-section:has(.flap-box.is-revealed) .story-narrative-2,
+.feed-section:has(.upper-flap.is-lifted) .story-narrative-2,
+.story-narrative-2.is-visible {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
 /* Illustration & Top-Hinged Tactile 3D Flap */
 .illustration-container {
   flex: 1;

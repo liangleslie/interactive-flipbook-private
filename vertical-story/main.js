@@ -41,6 +41,8 @@ function renderVerticalFeedDOM() {
             </div>
           </div>
 
+          <p class="story-narrative-2">${page.narrative2 || ''}</p>
+
           <div class="section-footer-cue">
             <span>${page.cue || 'Scroll down to begin ▼'}</span>
           </div>
@@ -60,11 +62,14 @@ function renderVerticalFeedDOM() {
           <div class="illustration-container">
             <div class="flap-box" data-section="${i}" title="${page.characterName || 'Hero'}">
               <img src="${page.lowerArt}" alt="Celebration" class="lower-art" />
-              <div class="upper-flap is-lifted">
+              <div class="upper-flap">
                 <img src="${page.upperArt}" alt="Celebration" class="upper-art" />
               </div>
+              <div class="flap-hint-pill">Peek inside 👆</div>
             </div>
           </div>
+
+          <p class="story-narrative-2">${page.narrative2 || ''}</p>
 
           <div>
             <button class="btn-restart" id="btn-restart">▲ Scroll Back to Top</button>
@@ -95,6 +100,8 @@ function renderVerticalFeedDOM() {
             <div class="flap-hint-pill">Lift flap 👆</div>
           </div>
         </div>
+
+        <p class="story-narrative-2">${page.narrative2 || ''}</p>
 
         <div class="section-footer-cue">
           <span>${page.cue || 'Scroll for next chapter ▼'}</span>
@@ -146,10 +153,11 @@ btnNext?.addEventListener('click', () => scrollToSection(currentSectionIndex + 1
 btnRestart?.addEventListener('click', () => {
   flapBoxes.forEach((box) => {
     const flap = box.querySelector('.upper-flap');
-    if (flap && box.getAttribute('data-section') !== String(totalSections - 1)) {
+    if (flap) {
       flap.classList.remove('is-lifted');
     }
     box.classList.remove('is-revealed');
+    box.closest('.feed-section')?.querySelector('.story-narrative-2')?.classList.remove('is-visible');
   });
   scrollToSection(0);
 });
@@ -191,6 +199,8 @@ flapBoxes.forEach((box) => {
 
     const isLifted = flap.classList.toggle('is-lifted');
     box.classList.toggle('is-revealed', isLifted);
+    const narrative2 = box.closest('.feed-section')?.querySelector('.story-narrative-2');
+    if (narrative2) narrative2.classList.toggle('is-visible', isLifted);
   });
 });
 

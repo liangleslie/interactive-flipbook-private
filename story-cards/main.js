@@ -47,7 +47,8 @@ function renderDeckDOM() {
           </div>
 
           <div>
-            <p class="deck-instruction">${page.narrative2 || page.caption || 'Tap right to flip card • Tap art to lift flap'}</p>
+            <p class="story-narrative-2">${page.narrative2 || ''}</p>
+            <p class="deck-instruction">${page.cue || 'Tap right to flip card • Tap art to lift flap'}</p>
           </div>
         </section>
       `;
@@ -65,10 +66,15 @@ function renderDeckDOM() {
           <div class="illustration-stage">
             <div class="flap-box" data-card="${i}" title="${page.characterName || 'Hero'}">
               <img src="${page.lowerArt}" alt="Celebration" class="lower-art" />
-              <div class="upper-door is-lifted">
+              <div class="upper-door">
                 <img src="${page.upperArt}" alt="Celebration" class="upper-art" />
               </div>
+              <div class="flap-hint-pill">Peek inside 👆</div>
             </div>
+          </div>
+
+          <div>
+            <p class="story-narrative-2">${page.narrative2 || ''}</p>
           </div>
 
           <div class="end-actions">
@@ -102,7 +108,8 @@ function renderDeckDOM() {
         </div>
 
         <div>
-          <p class="deck-instruction">${page.narrative2 || page.caption || 'Tap illustration to peek inside'}</p>
+          <p class="story-narrative-2">${page.narrative2 || ''}</p>
+          <p class="deck-instruction">${page.cue || 'Tap right to flip card • Tap art to lift flap'}</p>
         </div>
       </section>
     `;
@@ -201,10 +208,11 @@ btnReplay?.addEventListener('click', (e) => {
   e.stopPropagation();
   flapBoxes.forEach((box) => {
     const door = box.querySelector('.upper-door');
-    if (door && box.getAttribute('data-card') !== String(totalCards - 1)) {
+    if (door) {
       door.classList.remove('is-lifted');
     }
     box.classList.remove('is-revealed');
+    box.closest('.story-card')?.querySelector('.story-narrative-2')?.classList.remove('is-visible');
   });
   updateDeckState(0);
 });
@@ -218,6 +226,8 @@ flapBoxes.forEach((box) => {
 
     const isLifted = door.classList.toggle('is-lifted');
     box.classList.toggle('is-revealed', isLifted);
+    const narrative2 = box.closest('.story-card')?.querySelector('.story-narrative-2');
+    if (narrative2) narrative2.classList.toggle('is-visible', isLifted);
   });
 });
 

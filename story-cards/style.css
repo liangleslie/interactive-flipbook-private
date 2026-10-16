@@ -547,10 +547,40 @@ body {
   cursor: not-allowed;
 }
 
+.story-narrative-2 {
+  font-size: clamp(0.85rem, 2.2vw, 0.96rem);
+  line-height: 1.4;
+  color: #881337;
+  font-weight: 700;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  min-height: 1.4em;
+  margin-top: 0.25rem;
+}
+
+.card-cover .story-narrative-2,
+.card-end .story-narrative-2 {
+  color: #ffffff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.story-card:has(.flap-box.is-revealed) .story-narrative-2,
+.story-narrative-2.is-visible {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
 .deck-instruction {
   font-size: 0.82rem;
   font-weight: 700;
+  color: #78716c;
+  letter-spacing: 0.3px;
+}
+
+.card-cover .deck-instruction,
+.card-end .deck-instruction {
   color: #ffffff;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
-  letter-spacing: 0.3px;
 }

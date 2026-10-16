@@ -21,11 +21,12 @@ if (flipbookContainer) {
             <h2 class="cover-title">${page.title}</h2>
             <div class="cover-art">
               <img src="${page.lowerArt}" alt="${page.characterName || 'Hero'} lower" class="character-hero lower-art" />
-              <div class="upper-wrapper">
+              <div class="upper-wrapper" title="Tap to lift flap">
                 <img src="${page.upperArt}" alt="${page.characterName || 'Hero'} upper" class="character-hero upper-art" />
               </div>
             </div>
             <p class="cover-author">${page.narrative || page.text2 || ''}</p>
+            <p class="story-narrative-2">${page.narrative2 || ''}</p>
             <div class="cover-tap-hint">${page.cue || 'Tap to open ➔'}</div>
           </div>
         </div>
@@ -39,8 +40,15 @@ if (flipbookContainer) {
             <div class="back-logo">🌟</div>
             <h2>${page.title}</h2>
             <p>${page.narrative || page.text2 || ''}</p>
+            <div class="cover-art page-illustration">
+              <img src="${page.lowerArt}" alt="${page.characterName || 'Hero'} lower" class="character-hero lower-art" />
+              <div class="upper-wrapper" title="Tap to lift flap">
+                <img src="${page.upperArt}" alt="${page.characterName || 'Hero'} upper" class="character-hero upper-art" />
+              </div>
+            </div>
+            <p class="story-narrative-2">${page.narrative2 || ''}</p>
             <div class="back-footer">
-              <span>flipbook-js</span>
+              <span>${page.chapterTag || 'flipbook-js'}</span>
             </div>
           </div>
         </div>
@@ -56,11 +64,11 @@ if (flipbookContainer) {
           <p>${page.narrative || page.text2 || ''}</p>
           <div class="page-illustration">
             <img src="${page.lowerArt}" alt="${page.characterName || 'Hero'} lower" class="story-img lower-art" />
-            <div class="upper-wrapper">
+            <div class="upper-wrapper" title="Tap to lift flap">
               <img src="${page.upperArt}" alt="${page.characterName || 'Hero'} upper" class="story-img upper-art" />
             </div>
           </div>
-          <p class="story-caption">${page.narrative2 || page.caption || 'Tap to see what happens!'}</p>
+          <p class="story-narrative-2">${page.narrative2 || ''}</p>
         </div>
       </div>
     `;
@@ -373,16 +381,20 @@ document.querySelectorAll('.cover-art, .page-illustration').forEach((container) 
     lower.addEventListener('load', () => syncArtWrapper(lower, wrapper), { once: true });
   }
 
-  // Click wrapper -> hides whole div (including upper-art), revealing lower-art
+  // Click wrapper -> hides whole div (including upper-art), revealing lower-art & narrative2
   wrapper.addEventListener('click', (e) => {
     e.stopPropagation();
     wrapper.classList.add('is-hidden');
+    const page = container.closest('.c-flipbook__page');
+    page?.querySelector('.story-narrative-2')?.classList.add('is-visible');
   });
 
-  // Click lower-art -> restores whole div (including upper-art)
+  // Click lower-art -> restores whole div (including upper-art) & hides narrative2
   lower.addEventListener('click', (e) => {
     e.stopPropagation();
     wrapper.classList.remove('is-hidden');
+    const page = container.closest('.c-flipbook__page');
+    page?.querySelector('.story-narrative-2')?.classList.remove('is-visible');
   });
 
   container.addEventListener('click', (e) => {
