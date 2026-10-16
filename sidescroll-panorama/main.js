@@ -126,25 +126,63 @@ const morphTargets = Array.from(document.querySelectorAll('.character-morph-targ
 
 let currentSceneIndex = 0;
 
-// 5-Phase Animation Budget (in pixels of scroll delta)
-const D_FADE_IN = 200;  // Phase 2: Backing fades in (0 -> 1), upper-art scales (0.5 -> 1.0) once centered & pinned
-const D_MORPH = 320;    // Phase 3a: Morph upper-art -> lower-art & reveal narrative2 once solid
-const D_LINGER = 140;   // Phase 3b: Dwell at center with lower-art & narrative2 in full focus
-const D_FADE_OUT = 200; // Phase 4: Backing fades out (1 -> 0), narrative2/text fade out, lower-art scales to 50%
-const D_TOTAL = D_FADE_IN + D_MORPH + D_LINGER + D_FADE_OUT; // 860px total pinned window
+// Responsive 5-Phase Animation Budget (scaled dynamically based on viewport width)
+let D_FADE_IN = 200;
+let D_MORPH = 320;
+let D_LINGER = 140;
+let D_FADE_OUT = 200;
+let D_TOTAL = 860;
 
-// Cover page budget (starts with backing fade-in complete, morphs & reveals narrative2, then fade-out & outro)
-const D_COVER_PRE_LINGER = 140;  // Center dwell with backing fully visible & upper-art full size
-const D_COVER_MORPH = 320;       // Morph upper-art -> lower-art & reveal narrative2
-const D_COVER_POST_LINGER = 140; // Dwell with lower-art & narrative2 in full focus
-const D_COVER_FADE_OUT = 200;    // Backing fades out (1 -> 0), lower-art scales to 50%
-const D_COVER_TOTAL = D_COVER_PRE_LINGER + D_COVER_MORPH + D_COVER_POST_LINGER + D_COVER_FADE_OUT; // 800px
+let D_COVER_PRE_LINGER = 140;
+let D_COVER_MORPH = 320;
+let D_COVER_POST_LINGER = 140;
+let D_COVER_FADE_OUT = 200;
+let D_COVER_TOTAL = 800;
 
-// End page budget (fades in upperArt on approach, centers & pins, morphs into lowerArt & narrative2)
-const D_END_PRE_LINGER = 100;    // Center dwell with backing solid & upper-art full size
-const D_END_MORPH = 320;         // Morph upper-art -> lower-art & reveal narrative2
-const D_END_POST_LINGER = 120;   // Final celebration dwell in full focus until max scroll
-const D_END_TOTAL = D_END_PRE_LINGER + D_END_MORPH + D_END_POST_LINGER; // 540px
+let D_END_PRE_LINGER = 100;
+let D_END_MORPH = 320;
+let D_END_POST_LINGER = 120;
+let D_END_TOTAL = 540;
+
+function updateResponsiveBudgets() {
+  const isMobile = window.innerWidth <= 768;
+  if (isMobile) {
+    D_FADE_IN = 120;
+    D_MORPH = 200;
+    D_LINGER = 80;
+    D_FADE_OUT = 120;
+    D_TOTAL = D_FADE_IN + D_MORPH + D_LINGER + D_FADE_OUT; // 520px
+
+    D_COVER_PRE_LINGER = 90;
+    D_COVER_MORPH = 200;
+    D_COVER_POST_LINGER = 90;
+    D_COVER_FADE_OUT = 120;
+    D_COVER_TOTAL = D_COVER_PRE_LINGER + D_COVER_MORPH + D_COVER_POST_LINGER + D_COVER_FADE_OUT; // 500px
+
+    D_END_PRE_LINGER = 80;
+    D_END_MORPH = 200;
+    D_END_POST_LINGER = 100;
+    D_END_TOTAL = D_END_PRE_LINGER + D_END_MORPH + D_END_POST_LINGER; // 380px
+  } else {
+    D_FADE_IN = 200;
+    D_MORPH = 320;
+    D_LINGER = 140;
+    D_FADE_OUT = 200;
+    D_TOTAL = D_FADE_IN + D_MORPH + D_LINGER + D_FADE_OUT; // 860px
+
+    D_COVER_PRE_LINGER = 140;
+    D_COVER_MORPH = 320;
+    D_COVER_POST_LINGER = 140;
+    D_COVER_FADE_OUT = 200;
+    D_COVER_TOTAL = D_COVER_PRE_LINGER + D_COVER_MORPH + D_COVER_POST_LINGER + D_COVER_FADE_OUT; // 800px
+
+    D_END_PRE_LINGER = 100;
+    D_END_MORPH = 320;
+    D_END_POST_LINGER = 120;
+    D_END_TOTAL = D_END_PRE_LINGER + D_END_MORPH + D_END_POST_LINGER; // 540px
+  }
+}
+updateResponsiveBudgets();
 
 function updateSceneUI(idx) {
   currentSceneIndex = idx;
@@ -808,10 +846,12 @@ window.recalculateLyricAnchors = recalculateLyricAnchors;
 function updateLyricsParallax(S) {
   if (!lyricItems.length) return;
 
+  const isMobile = window.innerWidth <= 768;
+
   for (let i = 0; i < lyricItems.length; i++) {
     const item = lyricItems[i];
     const delta = S - item.targetS;
-    const halfSpan = item.windowSpan / 2;
+    const halfSpan = (isMobile ? item.windowSpan * 0.75 : item.windowSpan) / 2;
 
     if (Math.abs(delta) > halfSpan) {
       if (item.isActive || item.el.style.display !== 'none') {
@@ -830,13 +870,14 @@ function updateLyricsParallax(S) {
     const envelope = Math.cos((progress * Math.PI) / 2);
     const opacity = Math.pow(Math.max(0, envelope), 1.25) * item.peakOpacity;
 
-    // Dynamic lateral translation across the screen:
-    const sweepX = -progress * item.sweepDistance;
-    const arcY = -Math.sin(envelope * (Math.PI / 2)) * 16;
-    const blur = (1 - envelope) * item.maxBlur;
-    const rotZ = item.tilt + progress * 3;
-    const rotY = progress * 14;
-    const scale = (0.84 + 0.24 * envelope);
+    // Dynamic lateral translation across the screen (scaled for mobile screen width):
+    const effectiveSweep = isMobile ? item.sweepDistance * 0.28 : item.sweepDistance;
+    const sweepX = -progress * effectiveSweep;
+    const arcY = -Math.sin(envelope * (Math.PI / 2)) * (isMobile ? 8 : 16);
+    const blur = (1 - envelope) * (isMobile ? Math.min(item.maxBlur, 3.5) : item.maxBlur);
+    const rotZ = item.tilt + progress * (isMobile ? 1.5 : 3);
+    const rotY = progress * (isMobile ? 6 : 14);
+    const scale = (0.86 + 0.22 * envelope);
 
     item.el.style.opacity = opacity.toFixed(3);
     item.el.style.filter = blur > 0.4 ? `blur(${blur.toFixed(1)}px)` : 'none';
@@ -905,6 +946,7 @@ function syncPanoramaDimensions() {
     backdropLayer.style.backgroundImage = `url("${currentSrc}")`;
   }
 
+  updateResponsiveBudgets();
   recalculateLyricAnchors();
   if (viewport) updateLyricsParallax(viewport.scrollLeft);
 }
@@ -917,6 +959,7 @@ if (backdropImg) {
   }
 }
 
+updateResponsiveBudgets();
 initLyricsEngine();
 
 if (viewport) viewport.scrollLeft = 0;
@@ -928,6 +971,7 @@ updateLyricsParallax(0);
 
 window.addEventListener('load', () => {
   if (viewport) viewport.scrollLeft = 0;
+  updateResponsiveBudgets();
   syncPanoramaDimensions();
   recalculateLyricAnchors();
   handleScroll();
@@ -936,6 +980,7 @@ window.addEventListener('load', () => {
 });
 
 window.addEventListener('resize', () => {
+  updateResponsiveBudgets();
   syncPanoramaDimensions();
   recalculateLyricAnchors();
   handleScroll();

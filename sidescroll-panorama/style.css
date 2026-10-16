@@ -1034,3 +1034,231 @@ body {
     transition: none !important;
   }
 }
+
+/* ========================================================
+   Mobile Responsiveness (<= 768px)
+   ======================================================== */
+@media (max-width: 768px) {
+  :root {
+    --station-width: min(calc(100vw - 1.5rem), 380px);
+    --station-gap: clamp(260px, 75vw, 420px);
+    --pin-distance: 520px;
+    --cover-pin-distance: 500px;
+    --end-pin-distance: 380px;
+  }
+
+  /* Floating Top Navigation */
+  .top-nav {
+    top: max(0.5rem, env(safe-area-inset-top));
+    left: 0.5rem;
+    right: 0.5rem;
+    gap: 0.5rem;
+  }
+
+  .back-link {
+    font-size: 0.78rem;
+    padding: 0.4rem 0.7rem;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+
+  .journey-track {
+    max-width: calc(100vw - 110px);
+    padding: 0.2rem 0.4rem;
+  }
+
+  .journey-inner {
+    gap: 0.6rem;
+    padding: 0.3rem 0.6rem;
+  }
+
+  .landmark-node {
+    padding: 0 0.2rem;
+  }
+
+  .node-label {
+    font-size: 0.68rem;
+  }
+
+  /* Scene Station Padding and Dimensions */
+  .scene-station {
+    padding-top: max(3.4rem, calc(env(safe-area-inset-top) + 3rem));
+    padding-bottom: max(3.8rem, calc(env(safe-area-inset-bottom) + 3.2rem));
+  }
+
+  .scene-station.scene-end {
+    padding-top: max(3.4rem, calc(env(safe-area-inset-top) + 3rem));
+    padding-bottom: max(3.8rem, calc(env(safe-area-inset-bottom) + 3.2rem));
+  }
+
+  /* Station Card & Flow */
+  .station-card {
+    padding: 1.15rem 1rem 1rem 1rem;
+    border-radius: 24px;
+  }
+
+  .station-card::before {
+    border-radius: 24px;
+    box-shadow: 0 14px 38px -6px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.08);
+  }
+
+  .station-flow {
+    gap: 0.45rem;
+  }
+
+  /* High Legibility Mobile Typography */
+  .scene-badge {
+    font-size: 0.74rem;
+    padding: 0.2rem 0.7rem;
+  }
+
+  .hero-title {
+    font-size: clamp(1.65rem, 6.5vw, 2.2rem);
+    line-height: 1.12;
+  }
+
+  .story-subtitle {
+    font-size: 0.95rem;
+    line-height: 1.35;
+  }
+
+  .scroll-cue {
+    font-size: 0.82rem;
+    padding: 0.35rem 0.95rem;
+    margin-top: 0.25rem;
+  }
+
+  .chapter-badge-row {
+    margin-bottom: 0.1rem;
+  }
+
+  .page-number {
+    width: 26px;
+    height: 26px;
+    font-size: 0.85rem;
+  }
+
+  .chapter-tag {
+    font-size: 0.72rem;
+  }
+
+  .scene-heading {
+    font-size: clamp(1.45rem, 5.8vw, 1.85rem);
+    line-height: 1.15;
+  }
+
+  .scene-narrative {
+    font-size: 0.96rem;
+    line-height: 1.42;
+    font-weight: 700;
+    color: #1c1917;
+  }
+
+  .story-narrative-2 {
+    font-size: 0.92rem;
+    line-height: 1.38;
+    min-height: 1.3em;
+    margin-top: 0.15rem;
+  }
+
+  /* Character Spot Proportions */
+  .character-spot {
+    height: clamp(200px, 31vh, 265px);
+    margin: 0.35rem 0;
+  }
+
+  .character-morph-target {
+    width: clamp(185px, 52vw, 245px);
+    border-radius: 16px;
+  }
+
+  .character-img {
+    border-radius: 14px;
+    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.18));
+  }
+
+  /* Scene End */
+  .end-flow {
+    gap: 0.45rem;
+  }
+
+  .end-star {
+    font-size: 1.65rem;
+  }
+
+  .end-heading {
+    font-size: clamp(1.5rem, 5.5vw, 1.9rem);
+  }
+
+  .end-dedication {
+    font-size: 0.94rem;
+    line-height: 1.38;
+  }
+
+  .end-tag {
+    font-size: 0.72rem;
+  }
+
+  /* Floating Bottom Controls Toolbar */
+  .controls-toolbar {
+    bottom: max(0.5rem, env(safe-area-inset-bottom));
+    padding: 0.35rem 0.75rem;
+    gap: 0.55rem;
+  }
+
+  .control-btn {
+    min-height: 42px;
+    min-width: 74px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+    justify-content: center;
+  }
+
+  .chapter-label {
+    font-size: 0.85rem;
+    min-width: 60px;
+  }
+
+  /* Lyrics Parallax Mobile Optimization */
+  .lyric-item {
+    left: 50% !important;
+    max-width: 92vw;
+    width: auto;
+    text-align: center;
+  }
+
+  .lyric-item .lyric-inner {
+    white-space: normal;
+    text-align: center;
+    word-break: break-word;
+    display: inline-block;
+  }
+
+  .lyric-item.size-compact {
+    font-size: clamp(0.9rem, 3.2vw, 1.25rem);
+  }
+
+  .lyric-item.size-medium {
+    font-size: clamp(1.2rem, 4.4vw, 1.65rem);
+    line-height: 1.15;
+  }
+
+  .lyric-item.size-large {
+    font-size: clamp(1.5rem, 5.6vw, 2.1rem);
+    line-height: 1.08;
+  }
+
+  .lyric-item.size-massive {
+    font-size: clamp(1.85rem, 7vw, 2.5rem);
+    line-height: 1.02;
+  }
+
+  .lyric-echo-badge {
+    font-size: 0.72rem;
+    padding: 0.15rem 0.4rem;
+    margin-left: 0.25rem;
+  }
+}
