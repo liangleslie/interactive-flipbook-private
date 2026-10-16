@@ -28,7 +28,20 @@
           </div>
         </div>
       </div>
+
+      <!-- Background Music Toggle Controller -->
+      <button class="music-toggle-btn is-paused" id="btn-music" aria-label="Toggle background music" title="Play background music">
+        <span class="music-icon" id="music-icon" aria-hidden="true">🎵</span>
+        <span class="sound-bars" aria-hidden="true">
+          <span class="bar bar-1"></span>
+          <span class="bar bar-2"></span>
+          <span class="bar bar-3"></span>
+        </span>
+      </button>
     </header>
+
+    <!-- Background Audio Element -->
+    <audio id="bgm-audio" src="../resources/bgm.mp3" preload="auto" loop></audio>
 
     <!-- Fixed Environmental Landscape Backdrop (decoupled from scroll container to prevent blank space / scrollWidth inflation) -->
     <div class="panorama-backdrop-container" id="panorama-backdrop-container" aria-hidden="true">

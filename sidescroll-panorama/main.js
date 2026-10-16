@@ -12,9 +12,32 @@ const journeyProgress = document.getElementById('journey-progress');
 const lyricsLayerDeep = document.getElementById('lyrics-layer-deep');
 const lyricsLayerMid = document.getElementById('lyrics-layer-mid');
 const lyricsLayerForeground = document.getElementById('lyrics-layer-foreground');
+const bgmAudio = document.getElementById('bgm-audio');
+const btnMusic = document.getElementById('btn-music');
 
 const pages = storyBoard.pages || [];
 const sceneNames = pages.map(p => p.navLabel || p.title);
+
+// ponytail: measure actual first and last dot DOM centers to span track exactly
+function updateJourneyLineGeometry() {
+  const line = journeyTrack?.querySelector('.journey-line');
+  const nodes = journeyTrack?.querySelectorAll('.landmark-node');
+  if (!line || !nodes || nodes.length < 2) return;
+
+  const firstNode = nodes[0];
+  const lastNode = nodes[nodes.length - 1];
+  const firstDot = firstNode.querySelector('.node-dot');
+  const lastDot = lastNode.querySelector('.node-dot');
+  if (!firstDot || !lastDot) return;
+
+  const startX = firstNode.offsetLeft + firstDot.offsetLeft + firstDot.offsetWidth / 2;
+  const endX = lastNode.offsetLeft + lastDot.offsetLeft + lastDot.offsetWidth / 2;
+  const totalLength = Math.max(0, endX - startX);
+
+  line.style.left = `${startX}px`;
+  line.style.width = `${totalLength}px`;
+}
+window.updateJourneyLineGeometry = updateJourneyLineGeometry;
 
 // Render stations and landmarks dynamically
 function renderPanoramaDOM() {
@@ -37,6 +60,7 @@ function renderPanoramaDOM() {
     `;
     journeyInner.appendChild(node);
   });
+  updateJourneyLineGeometry();
 
   // 2. Render scene stations in #panorama-world
   panoramaWorld.innerHTML = pages.map((page, i) => {
@@ -184,22 +208,99 @@ function updateResponsiveBudgets() {
 }
 updateResponsiveBudgets();
 
-function updateSceneUI(idx) {
-  currentSceneIndex = idx;
-  if (chapterLabel) {
-    chapterLabel.textContent = sceneNames[idx] || `Scene ${idx + 1}`;
-  }
-  if (prevBtn) prevBtn.disabled = idx <= 0;
-  if (nextBtn) nextBtn.disabled = idx >= scenes.length - 1;
+// ========================================================
+// Background Music (BGM) Controller
+// Auto-plays on first interaction with gentle volume fade-in
+// User can pause / resume at any time via #btn-music
+// ========================================================
+let isMusicPlaying = false;
+let userMuted = false;
+let fadeTimer = null;
+const TARGET_VOLUME = 0.35;
 
-  landmarkNodes.forEach((node, i) => {
-    const isActive = i === idx;
-    node.classList.toggle('is-active', isActive);
-    if (isActive) {
-      node.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-    }
-  });
+function updateMusicUI(playing) {
+  if (!btnMusic) return;
+  btnMusic.classList.toggle('is-playing', playing);
+  btnMusic.classList.toggle('is-paused', !playing);
+  btnMusic.setAttribute('aria-label', playing ? 'Pause background music' : 'Play background music');
+  btnMusic.setAttribute('title', playing ? 'Pause background music' : 'Play background music');
 }
+
+function playBgm() {
+  if (!bgmAudio) return;
+  if (fadeTimer) clearInterval(fadeTimer);
+
+  bgmAudio.volume = 0;
+  const playPromise = bgmAudio.play();
+  if (playPromise !== undefined) {
+    playPromise.then(() => {
+      isMusicPlaying = true;
+      updateMusicUI(true);
+
+      let vol = 0;
+      fadeTimer = setInterval(() => {
+        vol += 0.035;
+        if (vol >= TARGET_VOLUME) {
+          bgmAudio.volume = TARGET_VOLUME;
+          clearInterval(fadeTimer);
+          fadeTimer = null;
+        } else {
+          bgmAudio.volume = vol;
+        }
+      }, 50);
+    }).catch((err) => {
+      console.warn('Autoplay prevented:', err);
+      updateMusicUI(false);
+    });
+  }
+}
+
+function pauseBgm() {
+  if (!bgmAudio) return;
+  if (fadeTimer) clearInterval(fadeTimer);
+
+  let vol = bgmAudio.volume;
+  fadeTimer = setInterval(() => {
+    vol -= 0.05;
+    if (vol <= 0.02) {
+      bgmAudio.volume = 0;
+      bgmAudio.pause();
+      clearInterval(fadeTimer);
+      fadeTimer = null;
+      isMusicPlaying = false;
+      updateMusicUI(false);
+    } else {
+      bgmAudio.volume = vol;
+    }
+  }, 30);
+}
+
+function toggleBgm() {
+  if (isMusicPlaying) {
+    userMuted = true;
+    pauseBgm();
+  } else {
+    userMuted = false;
+    playBgm();
+  }
+}
+window.toggleBgm = toggleBgm;
+window.bgmAudio = bgmAudio;
+
+function handleFirstInteractionAudio() {
+  if (!userMuted && !isMusicPlaying) {
+    playBgm();
+  }
+}
+
+['click', 'touchstart', 'keydown', 'wheel'].forEach(evt => {
+  window.addEventListener(evt, handleFirstInteractionAudio, { passive: true });
+});
+
+btnMusic?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleBgm();
+});
 
 // Native Compositor Pinning: calculate scroll offsets where sticky pinning begins
 function getScenePinStart(idx) {
@@ -221,7 +322,6 @@ function getSceneCenterScroll(idx) {
   if (idx === scenes.length - 1) {
     return Math.min(pinStart + D_END_PRE_LINGER + D_END_MORPH, maxScroll);
   }
-  // Scroll to scene pin start plus fade-in window so card is fully solid white & ready to morph
   return Math.min(pinStart + D_FADE_IN, maxScroll);
 }
 window.getSceneCenterScroll = getSceneCenterScroll;
@@ -239,53 +339,276 @@ function getActiveSceneIndex(S) {
 }
 window.getActiveSceneIndex = getActiveSceneIndex;
 
-function scrollToScene(idx) {
-  if (idx < 0 || idx >= scenes.length) return;
-  if (!viewport) return;
+// ========================================================
+// Keyframe Snapping Engine
+// Keyframe 1: Upper-Art is 100%
+// Keyframe 2: Lower-Art morph is complete
+// Constant speed linear transitions between keyframes
+// ========================================================
 
-  const targetS = getSceneCenterScroll(idx);
-  viewport.scrollTo({
-    left: targetS,
-    behavior: 'smooth'
+let currentKeyframeIndex = 0;
+Object.defineProperty(window, 'currentKeyframeIndex', {
+  get: () => currentKeyframeIndex,
+  set: (v) => { currentKeyframeIndex = v; }
+});
+let activeScrollAnim = null;
+
+function getKeyframes() {
+  const kfs = [];
+  if (!scenes.length) return kfs;
+
+  scenes.forEach((_, i) => {
+    if (i === 0) {
+      // Cover (Scene 0)
+      kfs.push({ sceneIndex: 0, phase: 'upper', s: 0, label: sceneNames[0] || 'Start' });
+      kfs.push({ sceneIndex: 0, phase: 'lower', s: D_COVER_PRE_LINGER + D_COVER_MORPH, label: sceneNames[0] || 'Start' });
+    } else if (i === scenes.length - 1) {
+      // End Scene
+      const pinStart = getScenePinStart(i);
+      kfs.push({ sceneIndex: i, phase: 'upper', s: pinStart, label: sceneNames[i] || 'The End' });
+      kfs.push({ sceneIndex: i, phase: 'lower', s: pinStart + D_END_PRE_LINGER + D_END_MORPH, label: sceneNames[i] || 'The End' });
+    } else {
+      // Story station
+      const pinStart = getScenePinStart(i);
+      kfs.push({ sceneIndex: i, phase: 'upper', s: pinStart + D_FADE_IN, label: sceneNames[i] || `Scene ${i + 1}` });
+      kfs.push({ sceneIndex: i, phase: 'lower', s: pinStart + D_FADE_IN + D_MORPH, label: sceneNames[i] || `Scene ${i + 1}` });
+    }
   });
 
-  updateSceneUI(idx);
+  return kfs;
+}
+window.getKeyframes = getKeyframes;
+
+function updateUIForKeyframe(idx) {
+  const kfs = getKeyframes();
+  if (!kfs.length) return;
+  idx = Math.max(0, Math.min(idx, kfs.length - 1));
+  currentKeyframeIndex = idx;
+  const kf = kfs[idx];
+  currentSceneIndex = kf.sceneIndex;
+
+  if (chapterLabel) {
+    chapterLabel.textContent = kf.label;
+  }
+  if (prevBtn) prevBtn.disabled = idx <= 0;
+  if (nextBtn) nextBtn.disabled = idx >= kfs.length - 1;
+
+  landmarkNodes.forEach((node, i) => {
+    const isActive = i === kf.sceneIndex;
+    node.classList.toggle('is-active', isActive);
+    if (isActive) {
+      node.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  });
+}
+window.updateUIForKeyframe = updateUIForKeyframe;
+
+function animateScrollConstantSpeed(targetS, onComplete) {
+  if (!viewport) return;
+  if (activeScrollAnim) {
+    cancelAnimationFrame(activeScrollAnim);
+    activeScrollAnim = null;
+  }
+
+  const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+  const clampedTarget = Math.max(0, Math.min(targetS, maxScroll));
+  const startS = viewport.scrollLeft;
+  const distance = clampedTarget - startS;
+
+  if (Math.abs(distance) < 1.5) {
+    viewport.scrollLeft = clampedTarget;
+    handleScroll();
+    if (onComplete) onComplete();
+    return;
+  }
+
+  // Constant speed linear interpolation
+  const isMorph = Math.abs(distance) <= 380;
+  const speed = isMorph ? 850 : 1350; // px/sec constant velocity
+  const rawDuration = (Math.abs(distance) / speed) * 1000;
+  const duration = isMorph
+    ? Math.max(340, Math.min(rawDuration, 420))
+    : Math.max(480, Math.min(rawDuration, 950));
+
+  const startTime = performance.now();
+
+  function step(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(1, elapsed / duration);
+    viewport.scrollLeft = startS + distance * progress;
+    handleScroll();
+
+    if (progress < 1) {
+      activeScrollAnim = requestAnimationFrame(step);
+    } else {
+      viewport.scrollLeft = clampedTarget;
+      handleScroll();
+      activeScrollAnim = null;
+      if (onComplete) onComplete();
+    }
+  }
+
+  activeScrollAnim = requestAnimationFrame(step);
+}
+window.animateScrollConstantSpeed = animateScrollConstantSpeed;
+
+function goToKeyframe(idx) {
+  const kfs = getKeyframes();
+  if (!kfs.length) return;
+  idx = Math.max(0, Math.min(idx, kfs.length - 1));
+  updateUIForKeyframe(idx);
+  animateScrollConstantSpeed(kfs[idx].s);
+}
+window.goToKeyframe = goToKeyframe;
+
+function goToNextKeyframe() {
+  const kfs = getKeyframes();
+  if (!kfs.length) return;
+  if (currentKeyframeIndex < kfs.length - 1) {
+    goToKeyframe(currentKeyframeIndex + 1);
+  }
+}
+window.goToNextKeyframe = goToNextKeyframe;
+
+function goToPrevKeyframe() {
+  if (currentKeyframeIndex > 0) {
+    goToKeyframe(currentKeyframeIndex - 1);
+  }
+}
+window.goToPrevKeyframe = goToPrevKeyframe;
+
+function scrollToScene(sceneIdx) {
+  const targetKfIdx = sceneIdx * 2;
+  goToKeyframe(targetKfIdx);
 }
 window.scrollToScene = scrollToScene;
 
-prevBtn?.addEventListener('click', () => scrollToScene(currentSceneIndex - 1));
-nextBtn?.addEventListener('click', () => scrollToScene(currentSceneIndex + 1));
+// Prev & Next Buttons toggle keyframes (takes 2 clicks to progress past each page)
+prevBtn?.addEventListener('click', (e) => {
+  e.preventDefault();
+  goToPrevKeyframe();
+});
+
+nextBtn?.addEventListener('click', (e) => {
+  e.preventDefault();
+  goToNextKeyframe();
+});
 
 landmarkNodes.forEach((node, idx) => {
-  node.addEventListener('click', () => scrollToScene(idx));
+  node.addEventListener('click', () => {
+    goToKeyframe(idx * 2);
+  });
 });
 
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowRight' || e.key === 'PageDown') scrollToScene(currentSceneIndex + 1);
-  if (e.key === 'ArrowLeft' || e.key === 'PageUp') scrollToScene(currentSceneIndex - 1);
+  if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+    e.preventDefault();
+    goToNextKeyframe();
+  }
+  if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+    e.preventDefault();
+    goToPrevKeyframe();
+  }
 });
 
-function getCenterFriction() {
-  const S = viewport.scrollLeft;
-  for (let i = 0; i < scenes.length; i++) {
-    const sc = getScenePinStart(i);
-    const pinDist = i === 0 ? D_COVER_TOTAL : (i === scenes.length - 1 ? D_END_TOTAL : D_TOTAL);
-    const delta = S - sc;
-    if (delta >= 0 && delta <= pinDist) {
-      return 0.85;
-    }
-  }
-  return 1.05;
-}
+// Wheel / Trackpad Snap Trigger
+let wheelCooldown = false;
+let wheelDeltaSum = 0;
+let wheelTimer = null;
 
 window.addEventListener('wheel', (e) => {
-  if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-  if (Math.abs(e.deltaY) < 4) return;
+  const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+  if (Math.abs(delta) < 4) return;
   e.preventDefault();
 
-  const friction = getCenterFriction();
-  viewport.scrollLeft += e.deltaY * friction;
+  if (wheelCooldown) return;
+
+  wheelDeltaSum += delta;
+  clearTimeout(wheelTimer);
+  wheelTimer = setTimeout(() => {
+    wheelDeltaSum = 0;
+  }, 160);
+
+  if (Math.abs(wheelDeltaSum) >= 25) {
+    wheelCooldown = true;
+    if (wheelDeltaSum > 0) {
+      goToNextKeyframe();
+    } else {
+      goToPrevKeyframe();
+    }
+    wheelDeltaSum = 0;
+    setTimeout(() => {
+      wheelCooldown = false;
+    }, 420);
+  }
 }, { passive: false });
+
+// Mobile Touch Horizontal Swipe Snapping
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
+let touchSwiping = false;
+
+window.addEventListener('touchstart', (e) => {
+  if (e.touches.length !== 1) return;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  touchStartTime = performance.now();
+  touchSwiping = false;
+}, { passive: true });
+
+window.addEventListener('touchmove', (e) => {
+  if (e.touches.length !== 1) return;
+  const dx = e.touches[0].clientX - touchStartX;
+  const dy = e.touches[0].clientY - touchStartY;
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
+    touchSwiping = true;
+  }
+}, { passive: true });
+
+window.addEventListener('touchend', (e) => {
+  if (!touchSwiping) return;
+  touchSwiping = false;
+  const touchEndX = e.changedTouches[0].clientX;
+  const dx = touchEndX - touchStartX;
+  const dt = performance.now() - touchStartTime;
+
+  if (Math.abs(dx) > 35 || (Math.abs(dx) > 20 && dt < 300)) {
+    if (dx < 0) {
+      goToNextKeyframe();
+    } else {
+      goToPrevKeyframe();
+    }
+  }
+}, { passive: true });
+
+// Mouse Drag Sideways Snapping for desktop
+let isMouseDown = false;
+let mouseStartX = 0;
+let mouseStartTime = 0;
+
+window.addEventListener('mousedown', (e) => {
+  if (e.button !== 0) return;
+  if (e.target.closest('button, a, input, .character-morph-target')) return;
+  isMouseDown = true;
+  mouseStartX = e.clientX;
+  mouseStartTime = performance.now();
+});
+
+window.addEventListener('mouseup', (e) => {
+  if (!isMouseDown) return;
+  isMouseDown = false;
+  const dx = e.clientX - mouseStartX;
+  const dt = performance.now() - mouseStartTime;
+
+  if (Math.abs(dx) > 35 || (Math.abs(dx) > 20 && dt < 300)) {
+    if (dx < 0) {
+      goToNextKeyframe();
+    } else {
+      goToPrevKeyframe();
+    }
+  }
+});
 
 function getBackgroundShift(S) {
   let shift = 0;
@@ -602,26 +925,24 @@ window.updateScrollDrivenMorphs = updateScrollDrivenMorphs;
 morphTargets.forEach((target) => {
   target.addEventListener('click', (e) => {
     e.stopPropagation();
-    const isPinned = target.classList.toggle('is-pinned');
-    const upper = target.querySelector('.upper-art');
-    const lower = target.querySelector('.lower-art');
     const scene = target.closest('.scene-station');
-    const narrative2 = scene?.querySelector('.story-narrative-2');
-    if (!upper || !lower) return;
+    const sceneIdx = parseInt(scene?.getAttribute('data-index') || '0', 10);
+    const upperKf = sceneIdx * 2;
+    const lowerKf = sceneIdx * 2 + 1;
 
-    if (isPinned) {
-      upper.style.opacity = '0';
-      upper.style.transform = 'translate(-50%, -50%) scale(1.05)';
-      lower.style.opacity = '1';
-      lower.style.transform = 'translate(-50%, -50%) scale(1)';
-      if (narrative2) {
-        narrative2.style.opacity = '1';
-        narrative2.style.transform = 'translateY(0)';
-      }
+    // Toggle between upper-art and lower-art keyframes at constant speed
+    if (currentKeyframeIndex === upperKf) {
+      goToKeyframe(lowerKf);
     } else {
-      updateScrollDrivenMorphs();
+      goToKeyframe(upperKf);
     }
   });
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('.scroll-cue')) {
+    goToNextKeyframe();
+  }
 });
 
 // Dynamic Music-Video Lyrics Parallax Engine
@@ -887,21 +1208,40 @@ function updateLyricsParallax(S) {
 window.updateLyricsParallax = updateLyricsParallax;
 
 let ticking = false;
+let lastMaxScroll = 0;
 
 function handleScroll() {
   if (!viewport) return;
 
   const maxScroll = Math.max(1, viewport.scrollWidth - viewport.clientWidth);
+  if (Math.abs(maxScroll - lastMaxScroll) > 10) {
+    lastMaxScroll = maxScroll;
+    recalculateLyricAnchors();
+  }
+  const kfs = getKeyframes();
+  const endS = kfs.length ? kfs[kfs.length - 1].s : maxScroll;
   if (journeyProgress) {
-    const pct = (viewport.scrollLeft / maxScroll) * 100;
+    const pct = endS > 0 ? (viewport.scrollLeft / endS) * 100 : 0;
     journeyProgress.style.width = `${Math.min(100, Math.max(0, pct))}%`;
   }
 
   const S = viewport.scrollLeft;
-  const activeIdx = getActiveSceneIndex(S);
-
-  if (activeIdx !== currentSceneIndex) {
-    updateSceneUI(activeIdx);
+  if (!activeScrollAnim) {
+    const kfs = getKeyframes();
+    if (kfs.length) {
+      let closest = 0;
+      let minDiff = Infinity;
+      for (let i = 0; i < kfs.length; i++) {
+        const diff = Math.abs(S - kfs[i].s);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closest = i;
+        }
+      }
+      if (closest !== currentKeyframeIndex) {
+        updateUIForKeyframe(closest);
+      }
+    }
   }
 
   updateScrollDrivenMorphs();
@@ -963,17 +1303,27 @@ updateResponsiveBudgets();
 initLyricsEngine();
 
 if (viewport) viewport.scrollLeft = 0;
-updateSceneUI(0);
+updateJourneyLineGeometry();
+updateUIForKeyframe(0);
 syncPanoramaDimensions();
 handleScroll();
 updateScrollDrivenMorphs();
 updateLyricsParallax(0);
 
+if (document.fonts?.ready) {
+  document.fonts.ready.then(() => {
+    updateJourneyLineGeometry();
+    handleScroll();
+  });
+}
+
 window.addEventListener('load', () => {
   if (viewport) viewport.scrollLeft = 0;
   updateResponsiveBudgets();
+  updateJourneyLineGeometry();
   syncPanoramaDimensions();
   recalculateLyricAnchors();
+  updateUIForKeyframe(0);
   handleScroll();
   updateScrollDrivenMorphs();
   updateLyricsParallax(0);
@@ -981,8 +1331,13 @@ window.addEventListener('load', () => {
 
 window.addEventListener('resize', () => {
   updateResponsiveBudgets();
+  updateJourneyLineGeometry();
   syncPanoramaDimensions();
   recalculateLyricAnchors();
+  const kfs = getKeyframes();
+  if (kfs[currentKeyframeIndex]) {
+    viewport.scrollLeft = kfs[currentKeyframeIndex].s;
+  }
   handleScroll();
   updateScrollDrivenMorphs();
   if (viewport) updateLyricsParallax(viewport.scrollLeft);

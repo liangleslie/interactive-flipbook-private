@@ -42,12 +42,18 @@ const UI_CONFIGS = {
 };
 
 const MIME_MAP = {
+  // Images
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
   '.webp': 'image/webp',
   '.svg': 'image/svg+xml',
   '.gif': 'image/gif',
+  // Audio
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.ogg': 'audio/ogg',
+  '.m4a': 'audio/mp4',
 };
 
 function findFiles(dir, list = []) {
@@ -60,19 +66,22 @@ function findFiles(dir, list = []) {
   return list;
 }
 
-// ponytail: build unified asset map of all images in dist/assets and dist/resources into base64 data URIs
+// ponytail: build unified asset map of all images & audio in dist/ and resources/ into base64 data URIs
 function buildImageMap() {
   const imageMap = {};
-  for (const file of findFiles(DIST)) {
-    const ext = extname(file).toLowerCase();
-    if (MIME_MAP[ext]) {
-      const b64 = readFileSync(file).toString('base64');
-      const dataUri = `data:${MIME_MAP[ext]};base64,${b64}`;
-      const name = basename(file);
-      imageMap[name] = dataUri;
-      // Map unhashed name if Vite appended chunk hash (e.g. panorama_backdrop-DcKJwTAE.jpg -> panorama_backdrop.jpg)
-      const unhashed = name.replace(/-[A-Za-z0-9_-]+(\.[a-z]+)$/, '$1');
-      imageMap[unhashed] = dataUri;
+  const searchDirs = [DIST, resolve('./resources')];
+  for (const dir of searchDirs) {
+    for (const file of findFiles(dir)) {
+      const ext = extname(file).toLowerCase();
+      if (MIME_MAP[ext]) {
+        const b64 = readFileSync(file).toString('base64');
+        const dataUri = `data:${MIME_MAP[ext]};base64,${b64}`;
+        const name = basename(file);
+        imageMap[name] = dataUri;
+        // Map unhashed name if Vite appended chunk hash (e.g. panorama_backdrop-DcKJwTAE.jpg -> panorama_backdrop.jpg)
+        const unhashed = name.replace(/-[A-Za-z0-9_-]+(\.[a-z]+)$/, '$1');
+        imageMap[unhashed] = dataUri;
+      }
     }
   }
   return imageMap;
@@ -185,7 +194,9 @@ function bundleUI(uiKey, { isAll = false, imageMap, storyBoard } = {}) {
 
   // Handle navigation links in distro output
   if (isAll) {
-    html = html.replace(/href=["']\.\.\/?["']\s*class=["']([^"']*\bback-link\b[^"']*)["']/g, 'href="./distro.html" class="$1"');
+    html = html.replace(/<a[^>]*\bback-link\b[^>]*>[\s\S]*?<\/a>/gi, (match) => {
+      return match.replace(/href=["']\.\.\/?["']/, 'href="./distro.html"');
+    });
     if (uiKey === 'main') {
       for (const [key] of Object.entries(UI_CONFIGS)) {
         if (key === 'main') continue;
@@ -193,8 +204,8 @@ function bundleUI(uiKey, { isAll = false, imageMap, storyBoard } = {}) {
       }
     }
   } else if (uiKey !== 'main') {
-    // Standalone single UI distro: hide back-link to prevent broken parent directory navigation
-    html = html.replace(/class=["']([^"']*\bback-link\b[^"']*)["']/g, 'class="$1" style="display:none;"');
+    // Standalone single UI distro: remove back-link badge completely
+    html = html.replace(/<a[^>]*\bback-link\b[^>]*>[\s\S]*?<\/a>\s*/gi, '');
   }
 
   return html;
