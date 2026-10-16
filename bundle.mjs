@@ -190,6 +190,22 @@ function compressAndEncodeMedia(filePath, { maxRes, quality, audioBitrate, forma
   return res;
 }
 
+// Vite chunk hashes in dist/assets/ are exactly 8 alphanumeric characters: name-[hash8].ext
+function getUnhashedName(filename) {
+  const match = filename.match(/^(.+)-([A-Za-z0-9_-]{8})(\.[a-zA-Z0-9]+)$/);
+  return match ? `${match[1]}${match[3]}` : null;
+}
+
+function getAssetUri(keyOrPath, imageMap) {
+  if (!keyOrPath || typeof keyOrPath !== 'string') return null;
+  if (imageMap[keyOrPath]) return imageMap[keyOrPath];
+  const base = basename(keyOrPath);
+  if (imageMap[base]) return imageMap[base];
+  const unhashed = getUnhashedName(base);
+  if (unhashed && imageMap[unhashed]) return imageMap[unhashed];
+  return null;
+}
+
 // ponytail: build unified asset map of all images & audio with down-res & compression into base64 data URIs
 function buildImageMap(options = {}) {
   const tools = detectTools();
@@ -206,13 +222,14 @@ function buildImageMap(options = {}) {
       if (!MIME_MAP[ext]) continue;
 
       const name = basename(file);
-      const unhashed = name.replace(/-[A-Za-z0-9_-]+(\.[a-z]+)$/, '$1');
+      const unhashed = getUnhashedName(name);
 
-      if (imageMap[unhashed] && !imageMap[name]) {
+      // If already mapped exact name, skip
+      if (imageMap[name]) continue;
+
+      // If this is a hashed asset from dist/assets/ and we already processed the unhashed original, reuse it
+      if (unhashed && imageMap[unhashed]) {
         imageMap[name] = imageMap[unhashed];
-        continue;
-      }
-      if (imageMap[name] && imageMap[unhashed]) {
         continue;
       }
 
@@ -220,10 +237,12 @@ function buildImageMap(options = {}) {
       if (!comp) continue;
 
       imageMap[name] = comp.dataUri;
-      imageMap[unhashed] = comp.dataUri;
+      if (unhashed) {
+        imageMap[unhashed] = comp.dataUri;
+      }
 
-      if (!seenFiles.has(unhashed)) {
-        seenFiles.add(unhashed);
+      if (!seenFiles.has(name)) {
+        seenFiles.add(name);
         totalOrigBytes += comp.origSize;
         totalCompBytes += comp.newSize;
         fileCount++;
@@ -248,9 +267,7 @@ function inlineImagesInCss(css, imageMap) {
     if (cleanPath.startsWith('data:') || cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
       return match;
     }
-    const base = basename(cleanPath);
-    const unhashed = base.replace(/-[A-Za-z0-9_-]+(\.[a-z]+)$/, '$1');
-    const uri = imageMap[cleanPath] || imageMap[base] || imageMap[unhashed];
+    const uri = getAssetUri(cleanPath, imageMap);
     if (uri) {
       return `url("${uri}")`;
     }
@@ -280,9 +297,8 @@ function prepareInlinedStoryBoard(imageMap) {
   const raw = JSON.parse(readFileSync(sbPath, 'utf-8'));
   function walk(val) {
     if (typeof val === 'string') {
-      const base = basename(val);
-      const unhashed = base.replace(/-[A-Za-z0-9_-]+(\.[a-z]+)$/, '$1');
-      return imageMap[val] || imageMap[base] || imageMap[unhashed] || val;
+      const uri = getAssetUri(val, imageMap);
+      return uri || val;
     }
     if (Array.isArray(val)) return val.map(walk);
     if (val && typeof val === 'object') {
@@ -396,7 +412,8 @@ Options:
   --audio-bitrate <br>  Audio bitrate for ffmpeg (default: 96k)
   --format <type>       Image format: webp (default) or orig
   --no-compress         Skip media downsampling and compression
-  --build, -b           Run "npm run build" before bundling
+  --no-build            Skip running "npm run build" before bundling
+  --build, -b           Force clean build
   --check, -c           Run integrity test across all UIs
   --help, -h            Show this help message
 
@@ -450,7 +467,7 @@ async function main() {
   // Parse arguments
   let uiArg = null;
   let outArg = null;
-  let forceBuild = false;
+  let skipBuild = false;
   let runCheck = false;
   let maxRes = 1600;
   let quality = 82;
@@ -460,8 +477,10 @@ async function main() {
 
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
-    if (a === '--build' || a === '-b') {
-      forceBuild = true;
+    if (a === '--no-build') {
+      skipBuild = true;
+    } else if (a === '--build' || a === '-b') {
+      skipBuild = false;
     } else if (a === '--check' || a === '-c') {
       runCheck = true;
     } else if (a === '--no-compress') {
@@ -501,8 +520,8 @@ async function main() {
 
   const compressOptions = { maxRes, quality, audioBitrate, format, noCompress };
 
-  // Auto-build if dist is missing or requested
-  if (!existsSync(DIST) || forceBuild) {
+  // Always build to ensure latest CSS/JS fixes unless explicitly skipped
+  if (!skipBuild || !existsSync(DIST)) {
     console.log('📦 Building project via "npm run build"...');
     execSync('npm run build', { stdio: 'inherit' });
   }
