@@ -171,9 +171,23 @@
       "cue": "Scroll along the path ➔"
     },
     {
+      "id": "page-12",
+      "type": "story",
+      "pageNumber": 12,
+      "navLabel": "12: Yong Herng",
+      "title": "Meet Yong Herng!",
+      "chapterTag": "Chapter Twelve",
+      "narrative": "Yong Herng stood cool and composed with his charts and binders, master of big plans and bold visions.",
+      "narrative2": "With Project Banyan in hand and a sharp eye for detail, Yong Herng keeps every big milestone on track!",
+      "upperArt": "../resources/jpg/yongherng.jpg",
+      "lowerArt": "../resources/jpg/yongherng.jpg",
+      "characterName": "Yong Herng",
+      "cue": "Scroll along the path ➔"
+    },
+    {
       "id": "page-end",
       "type": "end",
-      "pageNumber": 12,
+      "pageNumber": 13,
       "navLabel": "The End",
       "title": "The End ✨",
       "chapterTag": "To Sherry With Love",
