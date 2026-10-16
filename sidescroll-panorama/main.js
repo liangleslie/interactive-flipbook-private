@@ -1,5 +1,6 @@
 // Continuous Panorama Engine — Dynamically loaded from resources/story-board.json
 import storyBoard from '../resources/story-board.json';
+import lyricsData from '../resources/lyrics.json';
 
 const viewport = document.getElementById('panorama-viewport');
 const journeyTrack = document.getElementById('journey-track');
@@ -8,6 +9,9 @@ const prevBtn = document.getElementById('btn-prev');
 const nextBtn = document.getElementById('btn-next');
 const chapterLabel = document.getElementById('chapter-label');
 const journeyProgress = document.getElementById('journey-progress');
+const lyricsLayerDeep = document.getElementById('lyrics-layer-deep');
+const lyricsLayerMid = document.getElementById('lyrics-layer-mid');
+const lyricsLayerForeground = document.getElementById('lyrics-layer-foreground');
 
 const pages = storyBoard.pages || [];
 const sceneNames = pages.map(p => p.navLabel || p.title);
@@ -582,6 +586,265 @@ morphTargets.forEach((target) => {
   });
 });
 
+// Dynamic Music-Video Lyrics Parallax Engine
+const LYRIC_PRESETS = [
+  // Scene 0 (Cover): Lines 0-3
+  // 0: "Happiness hit her like a train on a track" -> Left side sky
+  { depth: 'mid', size: 'large', style: 'style-gradient', laneX: 22, laneY: 20, tilt: -2.5, sweepDistance: 320, maxBlur: 6 },
+  // 1: "Coming towards her, stuck still, no turning back" -> Right side meadow
+  { depth: 'foreground', size: 'medium', style: 'style-kinetic-italic', laneX: 78, laneY: 74, tilt: 2.5, sweepDistance: 360, maxBlur: 8 },
+  // 2: "She hid around corners and she hid under beds" -> Center high sky
+  { depth: 'deep', size: 'medium', style: 'style-dreamy', laneX: 50, laneY: 12, tilt: -1, sweepDistance: 240, maxBlur: 4 },
+  // 3: "She killed it with kisses and from it she fled" -> Left side lower
+  { depth: 'mid', size: 'large', style: 'style-neon', laneX: 24, laneY: 68, tilt: 3, sweepDistance: 300, maxBlur: 6 },
+
+  // Scene 1 (Ed): Lines 4-7
+  // 4: "With every bubble, she sank with a drink" -> Right side high
+  { depth: 'deep', size: 'medium', style: 'style-dreamy', laneX: 80, laneY: 22, tilt: -2, sweepDistance: 260, maxBlur: 4 },
+  // 5: "And washed it away down the kitchen sink" -> Center low meadow
+  { depth: 'mid', size: 'medium', style: 'style-gradient', laneX: 50, laneY: 86, tilt: 1.5, sweepDistance: -300, maxBlur: 6 },
+  // 6: "The dog days are over" -> Left side dramatic
+  { depth: 'foreground', size: 'massive', style: 'style-kinetic-italic', laneX: 20, laneY: 18, tilt: -3.5, sweepDistance: 400, maxBlur: 9 },
+  // 7: "The dog days are done" -> Right side meadow
+  { depth: 'mid', size: 'large', style: 'style-stroke', laneX: 78, laneY: 72, tilt: 2, sweepDistance: 320, maxBlur: 6 },
+
+  // Scene 2 (Leslie): Lines 8-11
+  // 8: "The horses are coming" -> Center high sky
+  { depth: 'foreground', size: 'large', style: 'style-neon', laneX: 52, laneY: 13, tilt: -2, sweepDistance: 350, maxBlur: 8 },
+  // 9: "So you better run" -> Left side lower meadow
+  { depth: 'foreground', size: 'massive', style: 'style-kinetic-italic', laneX: 22, laneY: 76, tilt: 3.5, sweepDistance: 420, maxBlur: 9 },
+  // 10: "Run fast for your mother, run fast for your father" -> Right side high
+  { depth: 'mid', size: 'large', style: 'style-gradient', laneX: 78, laneY: 20, tilt: -2.5, sweepDistance: 320, maxBlur: 6 },
+  // 11: "Run for your children, for your sisters and brothers" -> Left side mid
+  { depth: 'foreground', size: 'large', style: 'style-kinetic-italic', laneX: 24, laneY: 66, tilt: 2, sweepDistance: 340, maxBlur: 8 },
+
+  // Scene 3 (Anna): Lines 12-15
+  // 12: "Leave all your love and your longing behind" -> Right side sky
+  { depth: 'deep', size: 'medium', style: 'style-dreamy', laneX: 82, laneY: 18, tilt: -1.5, sweepDistance: 240, maxBlur: 4 },
+  // 13: "You can't carry it with you if you want to survive" -> Center low meadow
+  { depth: 'mid', size: 'large', style: 'style-stroke', laneX: 48, laneY: 86, tilt: 2.5, sweepDistance: -300, maxBlur: 6 },
+  // 14: "The dog days are over" -> Left side sky
+  { depth: 'foreground', size: 'massive', style: 'style-gradient', laneX: 18, laneY: 22, tilt: -3, sweepDistance: 380, maxBlur: 9 },
+  // 15: "The dog days are done" -> Right side meadow
+  { depth: 'mid', size: 'large', style: 'style-neon', laneX: 80, laneY: 72, tilt: 2, sweepDistance: 300, maxBlur: 6 },
+
+  // Scene 4 (Jeremy): Lines 16-19
+  // 16: "Can you hear the horses?" -> Center high sky
+  { depth: 'deep', size: 'large', style: 'style-stroke', laneX: 50, laneY: 14, tilt: -2, sweepDistance: 280, maxBlur: 5 },
+  // 17: "'Cause here they come" -> Left side meadow
+  { depth: 'foreground', size: 'massive', style: 'style-kinetic-italic', laneX: 22, laneY: 70, tilt: 3.5, sweepDistance: 400, maxBlur: 9 },
+  // 18: "And I never wanted anything from you" -> Right side sky
+  { depth: 'deep', size: 'medium', style: 'style-dreamy', laneX: 80, laneY: 24, tilt: -1, sweepDistance: 240, maxBlur: 4 },
+  // 19: "Except everything you had" -> Left side lower
+  { depth: 'mid', size: 'large', style: 'style-gradient', laneX: 24, laneY: 76, tilt: 2, sweepDistance: 320, maxBlur: 6 },
+
+  // Scene 5 (Kirill): Lines 20-23
+  // 20: "And what was left after that too, oh" -> Center high sky
+  { depth: 'deep', size: 'medium', style: 'style-dreamy', laneX: 52, laneY: 12, tilt: -2, sweepDistance: 250, maxBlur: 4 },
+  // 21: "Happiness hit her like a bullet in the back" -> Right side meadow
+  { depth: 'foreground', size: 'large', style: 'style-kinetic-italic', laneX: 78, laneY: 74, tilt: 2.5, sweepDistance: 360, maxBlur: 8 },
+  // 22: "Struck from a great height" -> Left side sky
+  { depth: 'mid', size: 'medium', style: 'style-stroke', laneX: 20, laneY: 24, tilt: -1.5, sweepDistance: 280, maxBlur: 6 },
+  // 23: "By someone who should have known better than that" -> Center low meadow
+  { depth: 'deep', size: 'medium', style: 'style-dreamy', laneX: 50, laneY: 87, tilt: 1.5, sweepDistance: -280, maxBlur: 4 },
+
+  // Scene 6 (Mich): Lines 24-27
+  // 24: "The dog days are over" -> Right side sky
+  { depth: 'foreground', size: 'massive', style: 'style-neon', laneX: 80, laneY: 18, tilt: -3, sweepDistance: 400, maxBlur: 9 },
+  // 25: "The dog days are done" -> Left side meadow
+  { depth: 'mid', size: 'large', style: 'style-gradient', laneX: 22, laneY: 75, tilt: 2, sweepDistance: 320, maxBlur: 6 },
+  // 26: "Can you hear the horses?" -> Center high sky
+  { depth: 'deep', size: 'large', style: 'style-stroke', laneX: 50, laneY: 13, tilt: -2, sweepDistance: 280, maxBlur: 5 },
+  // 27: "'Cause here they come" -> Right side meadow
+  { depth: 'foreground', size: 'massive', style: 'style-kinetic-italic', laneX: 78, laneY: 70, tilt: 3.5, sweepDistance: 420, maxBlur: 9 },
+
+  // Scene 7 (Sabrina): Lines 28-31
+  // 28: "Run fast for your mother, run fast for your father" -> Left side sky
+  { depth: 'foreground', size: 'large', style: 'style-gradient', laneX: 22, laneY: 20, tilt: -2.5, sweepDistance: 360, maxBlur: 8 },
+  // 29: "Run for your children, for your sisters and brothers" -> Right side meadow
+  { depth: 'mid', size: 'large', style: 'style-stroke', laneX: 80, laneY: 76, tilt: 2.5, sweepDistance: 320, maxBlur: 6 },
+  // 30: "Leave all your love and your longing behind" -> Center high sky
+  { depth: 'deep', size: 'medium', style: 'style-dreamy', laneX: 48, laneY: 12, tilt: -1.5, sweepDistance: 240, maxBlur: 4 },
+  // 31: "You can't carry it with you if you want to survive" -> Left side meadow
+  { depth: 'foreground', size: 'large', style: 'style-kinetic-italic', laneX: 20, laneY: 68, tilt: 2, sweepDistance: 380, maxBlur: 8 },
+
+  // Scene 8 (Steph): Lines 32-35
+  // 32: "The dog days are over" -> Right side sky
+  { depth: 'foreground', size: 'massive', style: 'style-neon', laneX: 80, laneY: 18, tilt: -3, sweepDistance: 400, maxBlur: 9 },
+  // 33: "The dog days are done" -> Left side meadow
+  { depth: 'mid', size: 'large', style: 'style-gradient', laneX: 22, laneY: 74, tilt: 2, sweepDistance: 320, maxBlur: 6 },
+  // 34: "Can you hear the horses?" -> Center high sky
+  { depth: 'deep', size: 'large', style: 'style-stroke', laneX: 52, laneY: 13, tilt: -2, sweepDistance: 280, maxBlur: 5 },
+  // 35: "'Cause here they come" -> Right side meadow
+  { depth: 'foreground', size: 'massive', style: 'style-kinetic-italic', laneX: 78, laneY: 70, tilt: 3.5, sweepDistance: 420, maxBlur: 9 },
+
+  // Scene 9 (Tag): Lines 36-39
+  // 36: "The dog days are over" -> Left side sky
+  { depth: 'foreground', size: 'large', style: 'style-gradient', laneX: 20, laneY: 18, tilt: -2, sweepDistance: 360, maxBlur: 8 },
+  // 37: "The dog days are done (Here they come)" -> Right side meadow
+  { depth: 'mid', size: 'large', style: 'style-echo', laneX: 78, laneY: 72, tilt: 2, sweepDistance: 320, maxBlur: 6 },
+  // 38: "The horses are coming" -> Center high sky
+  { depth: 'deep', size: 'large', style: 'style-stroke', laneX: 50, laneY: 14, tilt: -2.5, sweepDistance: 300, maxBlur: 5 },
+  // 39: "So you better run (Here they come)" -> Left side lower
+  { depth: 'foreground', size: 'massive', style: 'style-echo', laneX: 24, laneY: 76, tilt: 3, sweepDistance: 400, maxBlur: 9 },
+
+  // Scene 10 (End): Lines 40-43
+  // 40: "The dog days are over" -> Right side sky
+  { depth: 'foreground', size: 'massive', style: 'style-neon', laneX: 80, laneY: 16, tilt: -3, sweepDistance: 420, maxBlur: 9 },
+  // 41: "The dog days are done (Here they come)" -> Left side meadow
+  { depth: 'mid', size: 'large', style: 'style-echo', laneX: 22, laneY: 68, tilt: 2, sweepDistance: 340, maxBlur: 6 },
+  // 42: "The horses are coming" -> Center high sky
+  { depth: 'mid', size: 'large', style: 'style-stroke', laneX: 52, laneY: 12, tilt: -2, sweepDistance: 350, maxBlur: 6 },
+  // 43: "So you better run" -> Right side meadow
+  { depth: 'foreground', size: 'massive', style: 'style-kinetic-italic', laneX: 78, laneY: 78, tilt: 3.5, sweepDistance: 450, maxBlur: 9 },
+];
+
+let lyricItems = [];
+
+function initLyricsEngine() {
+  if (!lyricsLayerDeep || !lyricsLayerMid || !lyricsLayerForeground) return;
+
+  lyricsLayerDeep.innerHTML = '';
+  lyricsLayerMid.innerHTML = '';
+  lyricsLayerForeground.innerHTML = '';
+  lyricItems = [];
+
+  lyricsData.forEach((text, i) => {
+    const preset = LYRIC_PRESETS[i] || {
+      depth: 'mid',
+      size: 'medium',
+      style: 'style-gradient',
+      laneX: (i % 2 === 0 ? 22 : 78),
+      laneY: 25,
+      tilt: 0,
+      sweepDistance: 320,
+      maxBlur: 6,
+    };
+
+    const el = document.createElement('div');
+    el.className = `lyric-item depth-${preset.depth} size-${preset.size} ${preset.style}`;
+    el.style.setProperty('--lane-x', `${preset.laneX}%`);
+    el.style.setProperty('--lane-y', `${preset.laneY}%`);
+    el.style.display = 'none';
+
+    const inner = document.createElement('span');
+    inner.className = 'lyric-inner';
+
+    if (text.includes('(Here they come)')) {
+      inner.innerHTML = text.replace(
+        '(Here they come)',
+        '<span class="lyric-echo-badge">(Here they come)</span>'
+      );
+    } else {
+      inner.textContent = text;
+    }
+
+    el.appendChild(inner);
+
+    if (preset.depth === 'deep') {
+      lyricsLayerDeep.appendChild(el);
+    } else if (preset.depth === 'foreground') {
+      lyricsLayerForeground.appendChild(el);
+    } else {
+      lyricsLayerMid.appendChild(el);
+    }
+
+    lyricItems.push({
+      el,
+      index: i,
+      text,
+      depth: preset.depth,
+      laneX: preset.laneX,
+      laneY: preset.laneY,
+      tilt: preset.tilt,
+      sweepDistance: preset.sweepDistance || 320,
+      maxBlur: preset.maxBlur,
+      targetS: 0,
+      windowSpan: preset.depth === 'deep' ? 1400 : (preset.depth === 'foreground' ? 1050 : 1200),
+      peakOpacity: preset.depth === 'deep' ? 0.65 : (preset.depth === 'foreground' ? 1.0 : 0.95),
+      isActive: false,
+    });
+  });
+
+  recalculateLyricAnchors();
+}
+
+function recalculateLyricAnchors() {
+  if (!viewport || !scenes.length || !lyricItems.length) return;
+
+  const maxScroll = Math.max(1, viewport.scrollWidth - viewport.clientWidth);
+
+  for (let s = 0; s < scenes.length; s++) {
+    const Spin = getScenePinStart(s);
+    const pinDist = s === 0 ? D_COVER_TOTAL : (s === scenes.length - 1 ? D_END_TOTAL : D_TOTAL);
+    const Snext = s < scenes.length - 1 ? getScenePinStart(s + 1) : maxScroll;
+    const travelGap = Math.max(0, Snext - (Spin + pinDist));
+
+    const line0 = s * 4;
+    const line1 = s * 4 + 1;
+    const line2 = s * 4 + 2;
+    const line3 = s * 4 + 3;
+
+    if (lyricItems[line0]) {
+      lyricItems[line0].targetS = Math.max(0, s === 0 ? 0 : Spin - 120);
+    }
+    if (lyricItems[line1]) {
+      lyricItems[line1].targetS = Spin + pinDist * 0.45;
+    }
+    if (lyricItems[line2]) {
+      lyricItems[line2].targetS = s === scenes.length - 1
+        ? Spin + pinDist * 0.75
+        : Spin + pinDist + travelGap * 0.35;
+    }
+    if (lyricItems[line3]) {
+      lyricItems[line3].targetS = s === scenes.length - 1
+        ? maxScroll
+        : Spin + pinDist + travelGap * 0.75;
+    }
+  }
+}
+window.recalculateLyricAnchors = recalculateLyricAnchors;
+
+function updateLyricsParallax(S) {
+  if (!lyricItems.length) return;
+
+  for (let i = 0; i < lyricItems.length; i++) {
+    const item = lyricItems[i];
+    const delta = S - item.targetS;
+    const halfSpan = item.windowSpan / 2;
+
+    if (Math.abs(delta) > halfSpan) {
+      if (item.isActive || item.el.style.display !== 'none') {
+        item.el.style.display = 'none';
+        item.isActive = false;
+      }
+      continue;
+    }
+
+    if (!item.isActive) {
+      item.el.style.display = 'flex';
+      item.isActive = true;
+    }
+
+    const progress = delta / halfSpan;
+    const envelope = Math.cos((progress * Math.PI) / 2);
+    const opacity = Math.pow(Math.max(0, envelope), 1.25) * item.peakOpacity;
+
+    // Dynamic lateral translation across the screen:
+    const sweepX = -progress * item.sweepDistance;
+    const arcY = -Math.sin(envelope * (Math.PI / 2)) * 16;
+    const blur = (1 - envelope) * item.maxBlur;
+    const rotZ = item.tilt + progress * 3;
+    const rotY = progress * 14;
+    const scale = (0.84 + 0.24 * envelope);
+
+    item.el.style.opacity = opacity.toFixed(3);
+    item.el.style.filter = blur > 0.4 ? `blur(${blur.toFixed(1)}px)` : 'none';
+    item.el.style.transform = `translate3d(calc(-50% + ${sweepX.toFixed(1)}px), calc(-50% + ${arcY.toFixed(1)}px), 0) scale(${scale.toFixed(3)}) rotateZ(${rotZ.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg)`;
+  }
+}
+window.updateLyricsParallax = updateLyricsParallax;
+
 let ticking = false;
 
 function handleScroll() {
@@ -601,6 +864,7 @@ function handleScroll() {
   }
 
   updateScrollDrivenMorphs();
+  updateLyricsParallax(S);
 }
 window.handleScroll = handleScroll;
 
@@ -640,6 +904,9 @@ function syncPanoramaDimensions() {
     backdropLayer.style.setProperty('--panorama-bg', `url("${currentSrc}")`);
     backdropLayer.style.backgroundImage = `url("${currentSrc}")`;
   }
+
+  recalculateLyricAnchors();
+  if (viewport) updateLyricsParallax(viewport.scrollLeft);
 }
 
 if (backdropImg) {
@@ -650,21 +917,28 @@ if (backdropImg) {
   }
 }
 
+initLyricsEngine();
+
 if (viewport) viewport.scrollLeft = 0;
 updateSceneUI(0);
 syncPanoramaDimensions();
 handleScroll();
 updateScrollDrivenMorphs();
+updateLyricsParallax(0);
 
 window.addEventListener('load', () => {
   if (viewport) viewport.scrollLeft = 0;
   syncPanoramaDimensions();
+  recalculateLyricAnchors();
   handleScroll();
   updateScrollDrivenMorphs();
+  updateLyricsParallax(0);
 });
 
 window.addEventListener('resize', () => {
   syncPanoramaDimensions();
+  recalculateLyricAnchors();
   handleScroll();
   updateScrollDrivenMorphs();
+  if (viewport) updateLyricsParallax(viewport.scrollLeft);
 });
