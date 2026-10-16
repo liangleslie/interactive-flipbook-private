@@ -2,13 +2,14 @@
 // Run with: uv run node test-check.mjs
 import { spawn } from 'child_process';
 import assert from 'assert';
+import storyBoard from './resources/story-board.json' with { type: 'json' };
 
 const chrome = spawn('google-chrome-stable', [
   '--headless=new',
   '--remote-debugging-port=9222',
   '--no-sandbox',
   '--disable-gpu',
-  'http://localhost:5173/'
+  'http://localhost:5173/page-flip/'
 ]);
 
 await new Promise(r => setTimeout(r, 1200));
@@ -43,15 +44,23 @@ try {
   const getIndicator = () => evalExpr(`document.getElementById('page-indicator').textContent.trim()`);
   const getActiveCount = () => evalExpr(`document.querySelectorAll('.c-flipbook__page.is-active').length`);
 
+  const storyPages = storyBoard.pages.filter(p => p.type === 'story');
+  const numSpreads = Math.ceil(storyPages.length / 2);
+
   // Check initial state
   assert.strictEqual(await getIndicator(), 'Cover', 'Initial page must be Cover');
   assert.strictEqual(await getActiveCount(), 1, 'Only Cover must be active initially');
 
-  // Turn to Pages 1-2
-  await evalExpr(`document.getElementById('btn-next').click()`);
-  await new Promise(r => setTimeout(r, 1100));
-  assert.strictEqual(await getIndicator(), 'Pages 1-2', 'Should be at Pages 1-2');
-  assert.strictEqual(await getActiveCount(), 2, 'Two pages must be active on spread');
+  // Turn through all spreads
+  for (let s = 1; s <= numSpreads; s++) {
+    const pLeft = (s - 1) * 2 + 1;
+    const pRight = pLeft + 1;
+    const expected = pRight <= storyPages.length ? `Pages ${pLeft}-${pRight}` : `Page ${pLeft}`;
+    await evalExpr(`document.getElementById('btn-next').click()`);
+    await new Promise(r => setTimeout(r, 1100));
+    assert.strictEqual(await getIndicator(), expected, `Should be at ${expected}`);
+    assert.strictEqual(await getActiveCount(), 2, 'Two pages must be active on spread');
+  }
 
   // Turn to End
   await evalExpr(`document.getElementById('btn-next').click()`);
@@ -67,11 +76,11 @@ try {
   assert.strictEqual(await getIndicator(), 'The End', 'Must not overflow past The End');
   assert.strictEqual(await getActiveCount(), 1, 'Back Cover must remain active');
 
-  // Turn back to Cover
-  await evalExpr(`document.getElementById('btn-prev').click()`);
-  await new Promise(r => setTimeout(r, 1100));
-  await evalExpr(`document.getElementById('btn-prev').click()`);
-  await new Promise(r => setTimeout(r, 1100));
+  // Turn back to Cover through all spreads
+  for (let s = 0; s <= numSpreads; s++) {
+    await evalExpr(`document.getElementById('btn-prev').click()`);
+    await new Promise(r => setTimeout(r, 1100));
+  }
   assert.strictEqual(await getIndicator(), 'Cover', 'Must return to Cover');
   assert.strictEqual(await getActiveCount(), 1, 'Cover must be active');
 

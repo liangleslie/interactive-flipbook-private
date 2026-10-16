@@ -620,6 +620,14 @@ const backdropLayer = document.querySelector('.panorama-backdrop-layer');
 
 function syncPanoramaDimensions() {
   if (!backdropImg) return;
+  let currentSrc = backdropImg.getAttribute('src') || '';
+  if (currentSrc.includes('data:image/')) {
+    currentSrc = currentSrc.slice(currentSrc.indexOf('data:image/'));
+    if (backdropImg.getAttribute('src') !== currentSrc) {
+      backdropImg.src = currentSrc;
+    }
+  }
+
   const nw = backdropImg.naturalWidth;
   const nh = backdropImg.naturalHeight;
   if (nw && nh) {
@@ -628,9 +636,9 @@ function syncPanoramaDimensions() {
     document.documentElement.style.setProperty('--panorama-image-width', `${computedWidth}px`);
     document.documentElement.style.setProperty('--panorama-aspect', `${aspect.toFixed(3)}`);
   }
-  const currentSrc = backdropImg.getAttribute('src');
-  if (currentSrc && backdropLayer && !backdropLayer.style.backgroundImage) {
+  if (currentSrc && backdropLayer) {
     backdropLayer.style.setProperty('--panorama-bg', `url("${currentSrc}")`);
+    backdropLayer.style.backgroundImage = `url("${currentSrc}")`;
   }
 }
 

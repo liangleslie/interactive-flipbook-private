@@ -99,8 +99,15 @@ function inlineImagesInText(text, imageMap) {
   // Replace longer keys first to avoid partial replacements
   const sortedKeys = Object.keys(imageMap).sort((a, b) => b.length - a.length);
   for (const key of sortedKeys) {
+    const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Replace any quoted path ending with key: e.g. "path/to/key" -> "dataUri"
+    const quotedPathRegex = new RegExp(`(['"])(?:[\\w.-]+\\/)*${escaped}\\1`, 'g');
+    text = text.replace(quotedPathRegex, `$1${imageMap[key]}$1`);
+    // Fallback: replace any remaining bare occurrences of key
     text = text.replaceAll(key, imageMap[key]);
   }
+  // Safety cleanup: strip any accidental path prefix before data: URIs (e.g. ../assets/data: -> data:)
+  text = text.replace(/(['"(])(?:(?:\.\.|\.)\/|[a-zA-Z0-9_\-.]+\/)+(data:[^'")\s]+)/g, '$1$2');
   return text;
 }
 
@@ -136,8 +143,8 @@ function bundleUI(uiKey, { isAll = false, imageMap, storyBoard } = {}) {
 
   let html = readFileSync(htmlPath, 'utf-8');
 
-  // Strip modulepreload links
-  html = html.replace(/<link[^>]*rel=["']modulepreload["'][^>]*>\s*/gi, '');
+  // Strip modulepreload and image preload links (redundant in self-contained distro)
+  html = html.replace(/<link[^>]*rel=["'](?:modulepreload|preload)["'][^>]*>\s*/gi, '');
 
   // Inline CSS stylesheets
   const linkRegex = /<link[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["'][^>]*>|<link[^>]*href=["']([^"']+)["'][^>]*rel=["']stylesheet["'][^>]*>/gi;
@@ -357,6 +364,13 @@ async function main() {
     writeFileSync(outFile, html, 'utf-8');
     const mb = (Buffer.byteLength(html, 'utf-8') / 1024 / 1024).toFixed(2);
     console.log(`✅ Created ${outFile} (${mb} MB) [UI: ${selectedUI} — ${UI_CONFIGS[selectedUI].name}]`);
+    if (selectedUI !== 'main') {
+      const aliasOut = resolve(DIST, `distro-${selectedUI}.html`);
+      if (outFile !== aliasOut) {
+        writeFileSync(aliasOut, html, 'utf-8');
+        console.log(`  ✓ Also updated ${aliasOut}`);
+      }
+    }
   }
 }
 
