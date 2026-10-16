@@ -39,6 +39,38 @@ function updateJourneyLineGeometry() {
 }
 window.updateJourneyLineGeometry = updateJourneyLineGeometry;
 
+// ponytail: piecewise station interpolation ensures progress line hits each dot center with 0px error
+function getJourneyProgressPct(S) {
+  const kfs = getKeyframes();
+  const nodes = journeyTrack?.querySelectorAll('.landmark-node');
+  const N = nodes ? nodes.length : 0;
+  if (!kfs.length || N < 2) return 0;
+
+  const stationS = [];
+  for (let i = 0; i < N; i++) {
+    if (i === 0) {
+      stationS.push(0);
+    } else if (i === N - 1) {
+      stationS.push(kfs[kfs.length - 1].s);
+    } else {
+      stationS.push((kfs[i * 2].s + kfs[i * 2 + 1].s) / 2);
+    }
+  }
+
+  if (S <= stationS[0]) return 0;
+  if (S >= stationS[N - 1]) return 100;
+
+  for (let i = 0; i < N - 1; i++) {
+    if (S >= stationS[i] && S <= stationS[i + 1]) {
+      const span = stationS[i + 1] - stationS[i];
+      const frac = span > 0 ? (S - stationS[i]) / span : 0;
+      return ((i + frac) / (N - 1)) * 100;
+    }
+  }
+  return 100;
+}
+window.getJourneyProgressPct = getJourneyProgressPct;
+
 // Render stations and landmarks dynamically
 function renderPanoramaDOM() {
   if (!panoramaWorld || !journeyTrack) return;
@@ -1132,33 +1164,24 @@ function recalculateLyricAnchors() {
   if (!viewport || !scenes.length || !lyricItems.length) return;
 
   const maxScroll = Math.max(1, viewport.scrollWidth - viewport.clientWidth);
+  const totalScenes = scenes.length;
+  const totalLyrics = lyricItems.length;
 
-  for (let s = 0; s < scenes.length; s++) {
+  for (let i = 0; i < totalLyrics; i++) {
+    const sceneProgress = totalLyrics > 1 ? i / (totalLyrics - 1) : 0;
+    const sceneFloat = sceneProgress * (totalScenes - 1);
+    const s = Math.min(totalScenes - 2, Math.floor(sceneFloat));
+    const subProg = sceneFloat - s;
+
     const Spin = getScenePinStart(s);
-    const pinDist = s === 0 ? D_COVER_TOTAL : (s === scenes.length - 1 ? D_END_TOTAL : D_TOTAL);
-    const Snext = s < scenes.length - 1 ? getScenePinStart(s + 1) : maxScroll;
-    const travelGap = Math.max(0, Snext - (Spin + pinDist));
+    const Snext = s < totalScenes - 1 ? getScenePinStart(s + 1) : maxScroll;
 
-    const line0 = s * 4;
-    const line1 = s * 4 + 1;
-    const line2 = s * 4 + 2;
-    const line3 = s * 4 + 3;
-
-    if (lyricItems[line0]) {
-      lyricItems[line0].targetS = Math.max(0, s === 0 ? 0 : Spin - 120);
-    }
-    if (lyricItems[line1]) {
-      lyricItems[line1].targetS = Spin + pinDist * 0.45;
-    }
-    if (lyricItems[line2]) {
-      lyricItems[line2].targetS = s === scenes.length - 1
-        ? Spin + pinDist * 0.75
-        : Spin + pinDist + travelGap * 0.35;
-    }
-    if (lyricItems[line3]) {
-      lyricItems[line3].targetS = s === scenes.length - 1
-        ? maxScroll
-        : Spin + pinDist + travelGap * 0.75;
+    if (i === 0) {
+      lyricItems[i].targetS = 0;
+    } else if (i === totalLyrics - 1) {
+      lyricItems[i].targetS = maxScroll;
+    } else {
+      lyricItems[i].targetS = Spin + subProg * (Snext - Spin);
     }
   }
 }
@@ -1218,10 +1241,8 @@ function handleScroll() {
     lastMaxScroll = maxScroll;
     recalculateLyricAnchors();
   }
-  const kfs = getKeyframes();
-  const endS = kfs.length ? kfs[kfs.length - 1].s : maxScroll;
   if (journeyProgress) {
-    const pct = endS > 0 ? (viewport.scrollLeft / endS) * 100 : 0;
+    const pct = getJourneyProgressPct(viewport.scrollLeft);
     journeyProgress.style.width = `${Math.min(100, Math.max(0, pct))}%`;
   }
 

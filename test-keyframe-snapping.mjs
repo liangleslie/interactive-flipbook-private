@@ -49,9 +49,10 @@ try {
     return res.result?.result?.value;
   };
 
-  // 1. Verify 22 keyframes (2 per page: upper and lower)
+  // 1. Verify keyframes (2 per page: upper and lower)
+  const sceneCount = await evalExpr("document.querySelectorAll('.scene-station').length");
   const kfCount = await evalExpr("window.getKeyframes().length");
-  assert.strictEqual(kfCount, 22, 'Must have exactly 22 keyframes for 11 story scenes (2 per scene)');
+  assert.strictEqual(kfCount, sceneCount * 2, `Must have exactly ${sceneCount * 2} keyframes for ${sceneCount} story scenes (2 per scene)`);
 
   // 2. Initial state: keyframe 0, upper art 100%, prevBtn disabled
   const initialIdx = await evalExpr("window.currentKeyframeIndex");

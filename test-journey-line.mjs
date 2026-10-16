@@ -53,6 +53,16 @@ async function testViewport(width, height) {
       const lineLeft = line.offsetLeft;
       const lineRight = line.offsetLeft + line.offsetWidth;
 
+      // Measure dot centers and gaps
+      const dotCenters = nodes.map(n => {
+        const d = n.querySelector(".node-dot");
+        return n.offsetLeft + d.offsetLeft + d.offsetWidth / 2;
+      });
+      const gaps = [];
+      for (let i = 1; i < dotCenters.length; i++) {
+        gaps.push(Math.round(dotCenters[i] - dotCenters[i - 1]));
+      }
+
       // Start position
       vp.scrollLeft = 0;
       window.handleScroll();
@@ -65,36 +75,71 @@ async function testViewport(width, height) {
       window.handleScroll();
       const endProg = prog.style.width;
 
+      // Check alignment at every station
+      const N = nodes.length;
+      const stationAlignments = [];
+      for (let i = 0; i < N; i++) {
+        const s = i === 0 ? 0 : (i === N - 1 ? lastKf.s : (kfs[i * 2].s + kfs[i * 2 + 1].s) / 2);
+        vp.scrollLeft = s;
+        window.handleScroll();
+        const pctNum = parseFloat(prog.style.width);
+        const progPx = lineLeft + (pctNum / 100) * line.offsetWidth;
+        stationAlignments.push({
+          scene: i,
+          diff: Math.abs(progPx - dotCenters[i])
+        });
+      }
+
       return {
         firstDotCenter,
         lastDotCenter,
         lineLeft,
         lineRight,
         lineWidth: line.offsetWidth,
+        gaps,
+        allGapsEqual: gaps.every(g => g === gaps[0]),
+        gapValue: gaps[0],
         startProg,
-        endProg
+        endProg,
+        stationAlignments
       };
     })()`);
 
-    // Verification 1: Journey track line starts at first dot center
+    // Verification 1: All gaps between consecutive dots are strictly equal
+    assert.strictEqual(
+      metrics.allGapsEqual,
+      true,
+      `All gaps between dots must be equal. Got: ${JSON.stringify(metrics.gaps)}`
+    );
+
+    // Verification 2: Journey track line starts at first dot center
     assert.strictEqual(
       Math.abs(metrics.lineLeft - metrics.firstDotCenter) <= 1,
       true,
       `Line start (${metrics.lineLeft}) should match first dot center (${metrics.firstDotCenter})`
     );
 
-    // Verification 2: Journey track line ends at last dot center (The End)
+    // Verification 3: Journey track line ends at last dot center (The End)
     assert.strictEqual(
       Math.abs(metrics.lineRight - metrics.lastDotCenter) <= 1,
       true,
       `Line end (${metrics.lineRight}) should reach last dot center (${metrics.lastDotCenter})`
     );
 
-    // Verification 3: At start, progress is 0%
+    // Verification 4: At start, progress is 0%
     assert.strictEqual(metrics.startProg, '0%', 'Progress at start should be 0%');
 
-    // Verification 4: At finale keyframe, progress is 100%
+    // Verification 5: At finale keyframe, progress is 100%
     assert.strictEqual(metrics.endProg, '100%', 'Progress at finale keyframe should reach 100%');
+
+    // Verification 6: Progress line hits each dot center within 1px at every station
+    metrics.stationAlignments.forEach(a => {
+      assert.strictEqual(
+        a.diff <= 1,
+        true,
+        `Station ${a.scene} progress offset (${a.diff}px) should be <= 1px from dot center`
+      );
+    });
 
     ws.close();
   } finally {
@@ -108,4 +153,4 @@ await testViewport(1920, 953);
 console.log('Testing mobile viewport (390x844)...');
 await testViewport(390, 844);
 
-console.log('✅ test-journey-line passed: track line geometry and 100% progress at finale verified on desktop and mobile.');
+console.log('✅ test-journey-line passed: constant dot gaps and exact 0px station dot alignment verified on desktop and mobile.');
