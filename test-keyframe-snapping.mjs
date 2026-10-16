@@ -115,10 +115,44 @@ try {
   const kfWheelIdx = await evalExpr("window.currentKeyframeIndex");
   assert.strictEqual(kfWheelIdx, 3, 'Wheel forward must trigger snapping to next keyframe');
 
+  // 8. Verify no scaling in morphing animation (transforms must be pure translate without scale)
+  const scene1UpperTransform = await evalExpr("document.querySelector('#scene-1 .upper-art').style.transform");
+  const scene1LowerTransform = await evalExpr("document.querySelector('#scene-1 .lower-art').style.transform");
+  assert(!scene1UpperTransform.includes('scale'), 'upperArt transform must not include scale during morph');
+  assert(!scene1LowerTransform.includes('scale'), 'lowerArt transform must not include scale during morph');
+
+  // 9. Verify same-art behavior (Scene 7: Sabrina, upperArt === lowerArt)
+  // Jump to Sabrina upper-art keyframe (kf 14)
+  await evalExpr("window.goToKeyframe(14)");
+  await new Promise(r => setTimeout(r, 1200));
+
+  const sabrinaUpperOpKf14 = parseFloat(await evalExpr("document.querySelector('#scene-7 .upper-art').style.opacity"));
+  const sabrinaLowerOpKf14 = parseFloat(await evalExpr("document.querySelector('#scene-7 .lower-art').style.opacity"));
+  assert(sabrinaUpperOpKf14 > 0.9, 'Sabrina upper-art must be 100% visible at keyframe 14');
+  assert.strictEqual(sabrinaLowerOpKf14, 0, 'Sabrina lower-art must have 0 opacity to prevent duplicate layer');
+
+  // Jump to Sabrina lower-art morph keyframe (kf 15)
+  await evalExpr("window.goToKeyframe(15)");
+  await new Promise(r => setTimeout(r, 600));
+
+  const sabrinaUpperOpKf15 = parseFloat(await evalExpr("document.querySelector('#scene-7 .upper-art').style.opacity"));
+  const sabrinaLowerOpKf15 = parseFloat(await evalExpr("document.querySelector('#scene-7 .lower-art').style.opacity"));
+  const sabrinaNarrative2Op = parseFloat(await evalExpr("document.querySelector('#scene-7 .story-narrative-2').style.opacity"));
+  assert(sabrinaUpperOpKf15 > 0.9, 'Sabrina upper-art must remain 100% solid through morph (no opacity dip/stutter)');
+  assert.strictEqual(sabrinaLowerOpKf15, 0, 'Sabrina lower-art must remain 0 to prevent layer fighting');
+  assert(sabrinaNarrative2Op > 0.9, 'Sabrina narrative2 must appear at keyframe 15');
+
+  // Verify halfway scroll position between kf 14 and kf 15 has ZERO opacity dip
+  const sPin7 = await evalExpr("window.getScenePinStart(7)");
+  const midScroll = sPin7 + 450 + 250; // D_FADE_IN + D_MORPH/2
+  await evalExpr(`document.getElementById('panorama-viewport').scrollLeft = ${midScroll}; window.updateScrollDrivenMorphs();`);
+  const sabrinaMidUpperOp = parseFloat(await evalExpr("document.querySelector('#scene-7 .upper-art').style.opacity"));
+  assert.strictEqual(sabrinaMidUpperOp, 1, 'Same-art upper-art opacity must stay rock-solid 1.0 mid-morph without 75% dip');
+
   assert.strictEqual(consoleErrors.length, 0, 'Must have zero runtime console errors');
 
   ws.close();
-  console.log('✅ test-keyframe-snapping passed: 22 keyframes, 2 clicks per page, constant speed transitions verified.');
+  console.log('✅ test-keyframe-snapping passed: zero-scale morph and same-art stutter elimination verified.');
 } finally {
   chrome.kill();
 }
