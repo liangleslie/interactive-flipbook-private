@@ -143,9 +143,37 @@
       "cue": "Scroll along the path ➔"
     },
     {
+      "id": "page-10",
+      "type": "story",
+      "pageNumber": 10,
+      "navLabel": "10: Leena",
+      "title": "Meet Leena!",
+      "chapterTag": "Chapter Ten",
+      "narrative": "Leena brought focused creativity and bright smiles to every task, inspiring everyone around her.",
+      "narrative2": "Blast off! Leena soared through the cosmos in her dragon astronaut suit, reaching for the stars!",
+      "upperArt": "../resources/png/leena-1.png",
+      "lowerArt": "../resources/png/leena-2.png",
+      "characterName": "Leena",
+      "cue": "Scroll along the path ➔"
+    },
+    {
+      "id": "page-11",
+      "type": "story",
+      "pageNumber": 11,
+      "navLabel": "11: Ming Ming",
+      "title": "Meet Ming Ming!",
+      "chapterTag": "Chapter Eleven",
+      "narrative": "Ming Ming brought calm wisdom and a refreshing warmth, always ready with encouraging words.",
+      "narrative2": "Cheers to friendship! Ming Ming raised a celebratory glass to toast wonderful journeys and bright futures!",
+      "upperArt": "../resources/jpg/mingming-1.jpg",
+      "lowerArt": "../resources/jpg/mingming-2.jpg",
+      "characterName": "Ming Ming",
+      "cue": "Scroll along the path ➔"
+    },
+    {
       "id": "page-end",
       "type": "end",
-      "pageNumber": 10,
+      "pageNumber": 12,
       "navLabel": "The End",
       "title": "The End ✨",
       "chapterTag": "To Sherry With Love",
