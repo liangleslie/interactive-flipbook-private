@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 // Bundle dist/ into a single self-contained HTML file for distro distribution.
-import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync } from 'fs';
 import { resolve, dirname, basename, extname, join } from 'path';
 import { execSync } from 'child_process';
 import { createInterface } from 'readline';
+import { createHash } from 'crypto';
 
 const DIST = resolve('./dist');
 const DEFAULT_OUT = resolve(DIST, 'distro.html');
+const CACHE_DIR = resolve('./node_modules/.cache/distro-media');
+const mediaMemoryCache = new Map();
 
 const UI_CONFIGS = {
   'sidescroll-panorama': {
@@ -66,24 +69,175 @@ function findFiles(dir, list = []) {
   return list;
 }
 
-// ponytail: build unified asset map of all images & audio in dist/ and resources/ into base64 data URIs
-function buildImageMap() {
-  const imageMap = {};
-  const searchDirs = [DIST, resolve('./resources')];
-  for (const dir of searchDirs) {
-    for (const file of findFiles(dir)) {
-      const ext = extname(file).toLowerCase();
-      if (MIME_MAP[ext]) {
-        const b64 = readFileSync(file).toString('base64');
-        const dataUri = `data:${MIME_MAP[ext]};base64,${b64}`;
-        const name = basename(file);
-        imageMap[name] = dataUri;
-        // Map unhashed name if Vite appended chunk hash (e.g. panorama_backdrop-DcKJwTAE.jpg -> panorama_backdrop.jpg)
-        const unhashed = name.replace(/-[A-Za-z0-9_-]+(\.[a-z]+)$/, '$1');
-        imageMap[unhashed] = dataUri;
+function detectTools() {
+  let magick = null;
+  try {
+    execSync('magick -version', { stdio: 'ignore' });
+    magick = 'magick';
+  } catch {
+    try {
+      execSync('convert -version', { stdio: 'ignore' });
+      magick = 'convert';
+    } catch {}
+  }
+  let ffmpeg = false;
+  try {
+    execSync('ffmpeg -version', { stdio: 'ignore' });
+    ffmpeg = true;
+  } catch {}
+  return { magick, ffmpeg };
+}
+
+// ponytail: down-res and compress raster image/audio using ImageMagick/ffmpeg with content-hashed disk cache
+function compressAndEncodeMedia(filePath, { maxRes, quality, audioBitrate, format, noCompress, tools }) {
+  const ext = extname(filePath).toLowerCase();
+  if (!MIME_MAP[ext]) return null;
+
+  const rawBuffer = readFileSync(filePath);
+  if (noCompress) {
+    return {
+      dataUri: `data:${MIME_MAP[ext]};base64,${rawBuffer.toString('base64')}`,
+      origSize: rawBuffer.length,
+      newSize: rawBuffer.length,
+    };
+  }
+
+  const hash = createHash('sha256').update(rawBuffer).digest('hex').slice(0, 16);
+  const cacheKey = `${hash}_res${maxRes}_q${quality}_f${format}_a${audioBitrate}`;
+  if (mediaMemoryCache.has(cacheKey)) {
+    return mediaMemoryCache.get(cacheKey);
+  }
+
+  mkdirSync(CACHE_DIR, { recursive: true });
+
+  const isRasterImg = ['.jpg', '.jpeg', '.png', '.webp'].includes(ext);
+  const isAudio = ['.mp3', '.wav', '.ogg', '.m4a'].includes(ext);
+
+  let targetMime = MIME_MAP[ext];
+  let compressedBuffer = null;
+
+  if (isRasterImg && (tools.magick || tools.ffmpeg)) {
+    const useWebp = format === 'webp';
+    const targetExt = useWebp ? '.webp' : (ext === '.jpeg' ? '.jpg' : ext);
+    targetMime = useWebp ? 'image/webp' : (ext === '.jpeg' ? 'image/jpeg' : MIME_MAP[ext]);
+    const cacheFile = join(CACHE_DIR, `${hash}_${maxRes}_${quality}${targetExt}`);
+
+    if (existsSync(cacheFile)) {
+      compressedBuffer = readFileSync(cacheFile);
+    } else {
+      try {
+        if (tools.magick) {
+          const resizeArg = `-resize "${maxRes}x${maxRes}>"`;
+          if (useWebp) {
+            execSync(`${tools.magick} "${filePath}" ${resizeArg} -quality ${quality} -strip webp:"${cacheFile}"`, { stdio: 'pipe' });
+          } else if (targetExt === '.png') {
+            execSync(`${tools.magick} "${filePath}" ${resizeArg} -strip png:"${cacheFile}"`, { stdio: 'pipe' });
+          } else {
+            execSync(`${tools.magick} "${filePath}" ${resizeArg} -quality ${quality} -strip "${cacheFile}"`, { stdio: 'pipe' });
+          }
+        } else if (tools.ffmpeg) {
+          const vfArg = `-vf "scale='min(${maxRes},iw)':'min(${maxRes},ih)':force_original_aspect_ratio=decrease"`;
+          if (useWebp) {
+            execSync(`ffmpeg -y -i "${filePath}" ${vfArg} -quality ${quality} "${cacheFile}"`, { stdio: 'pipe' });
+          } else if (targetExt === '.png') {
+            execSync(`ffmpeg -y -i "${filePath}" ${vfArg} "${cacheFile}"`, { stdio: 'pipe' });
+          } else {
+            execSync(`ffmpeg -y -i "${filePath}" ${vfArg} -q:v 3 "${cacheFile}"`, { stdio: 'pipe' });
+          }
+        }
+        if (existsSync(cacheFile)) {
+          compressedBuffer = readFileSync(cacheFile);
+        }
+      } catch (err) {
+        compressedBuffer = rawBuffer;
+        targetMime = MIME_MAP[ext];
+      }
+    }
+  } else if (isAudio && tools.ffmpeg) {
+    targetMime = 'audio/mpeg';
+    const cacheFile = join(CACHE_DIR, `${hash}_${audioBitrate}.mp3`);
+    if (existsSync(cacheFile)) {
+      compressedBuffer = readFileSync(cacheFile);
+    } else {
+      try {
+        execSync(`ffmpeg -y -i "${filePath}" -b:a ${audioBitrate} "${cacheFile}"`, { stdio: 'pipe' });
+        if (existsSync(cacheFile)) {
+          compressedBuffer = readFileSync(cacheFile);
+        }
+      } catch {
+        compressedBuffer = rawBuffer;
+        targetMime = MIME_MAP[ext];
       }
     }
   }
+
+  if (!compressedBuffer) {
+    compressedBuffer = rawBuffer;
+    targetMime = MIME_MAP[ext];
+  }
+
+  if (compressedBuffer.length > rawBuffer.length && targetMime === MIME_MAP[ext]) {
+    compressedBuffer = rawBuffer;
+  }
+
+  const dataUri = `data:${targetMime};base64,${compressedBuffer.toString('base64')}`;
+  const res = {
+    dataUri,
+    origSize: rawBuffer.length,
+    newSize: compressedBuffer.length,
+  };
+  mediaMemoryCache.set(cacheKey, res);
+  return res;
+}
+
+// ponytail: build unified asset map of all images & audio with down-res & compression into base64 data URIs
+function buildImageMap(options = {}) {
+  const tools = detectTools();
+  const imageMap = {};
+  const searchDirs = [resolve('./resources'), DIST];
+  const seenFiles = new Set();
+  let totalOrigBytes = 0;
+  let totalCompBytes = 0;
+  let fileCount = 0;
+
+  for (const dir of searchDirs) {
+    for (const file of findFiles(dir)) {
+      const ext = extname(file).toLowerCase();
+      if (!MIME_MAP[ext]) continue;
+
+      const name = basename(file);
+      const unhashed = name.replace(/-[A-Za-z0-9_-]+(\.[a-z]+)$/, '$1');
+
+      if (imageMap[unhashed] && !imageMap[name]) {
+        imageMap[name] = imageMap[unhashed];
+        continue;
+      }
+      if (imageMap[name] && imageMap[unhashed]) {
+        continue;
+      }
+
+      const comp = compressAndEncodeMedia(file, { ...options, tools });
+      if (!comp) continue;
+
+      imageMap[name] = comp.dataUri;
+      imageMap[unhashed] = comp.dataUri;
+
+      if (!seenFiles.has(unhashed)) {
+        seenFiles.add(unhashed);
+        totalOrigBytes += comp.origSize;
+        totalCompBytes += comp.newSize;
+        fileCount++;
+      }
+    }
+  }
+
+  if (fileCount > 0 && !options.noCompress) {
+    const origMB = (totalOrigBytes / 1024 / 1024).toFixed(2);
+    const compMB = (totalCompBytes / 1024 / 1024).toFixed(2);
+    const savedPct = totalOrigBytes > 0 ? (((totalOrigBytes - totalCompBytes) / totalOrigBytes) * 100).toFixed(1) : 0;
+    console.log(`  🗜️  Media compressed: ${fileCount} files, ${origMB} MB → ${compMB} MB (${savedPct}% reduction)`);
+  }
+
   return imageMap;
 }
 
@@ -228,30 +382,36 @@ function printUsage() {
 Usage: node bundle.mjs [options] [ui]
 
 Options:
-  --ui, -u <name>     Choose UI to package:
-                        1) sidescroll-panorama (aliases: panorama, continuous) [default]
-                        2) page-flip           (aliases: flip, flipbook)
-                        3) sidescroll-cards    (aliases: cards, strip)
-                        4) vertical-story      (aliases: vertical, storyboard)
-                        5) story-cards         (aliases: deck)
-                        6) main                (aliases: hub, menu)
-                        7) all                 (packages all UIs)
-  --out, -o <file>    Output destination file (default: ./dist/distro.html)
-  --build, -b         Run "npm run build" before bundling
-  --check, -c         Run integrity test across all UIs
-  --help, -h          Show this help message
+  --ui, -u <name>       Choose UI to package:
+                          1) sidescroll-panorama (aliases: panorama, continuous) [default]
+                          2) page-flip           (aliases: flip, flipbook)
+                          3) sidescroll-cards    (aliases: cards, strip)
+                          4) vertical-story      (aliases: vertical, storyboard)
+                          5) story-cards         (aliases: deck)
+                          6) main                (aliases: hub, menu)
+                          7) all                 (packages all UIs)
+  --out, -o <file>      Output destination file (default: ./dist/distro.html)
+  --max-res <px>        Max image dimension constraint in px (default: 1600)
+  --quality, -q <1-100> Image compression quality (default: 82)
+  --audio-bitrate <br>  Audio bitrate for ffmpeg (default: 96k)
+  --format <type>       Image format: webp (default) or orig
+  --no-compress         Skip media downsampling and compression
+  --build, -b           Run "npm run build" before bundling
+  --check, -c           Run integrity test across all UIs
+  --help, -h            Show this help message
 
 Short switches:
-  --panorama          Shortcut for --ui sidescroll-panorama
-  --flip              Shortcut for --ui page-flip
-  --cards             Shortcut for --ui sidescroll-cards
-  --vertical          Shortcut for --ui vertical-story
-  --deck              Shortcut for --ui story-cards
-  --all               Shortcut for --ui all
+  --panorama            Shortcut for --ui sidescroll-panorama
+  --flip                Shortcut for --ui page-flip
+  --cards               Shortcut for --ui sidescroll-cards
+  --vertical            Shortcut for --ui vertical-story
+  --deck                Shortcut for --ui story-cards
+  --all                 Shortcut for --ui all
 
 Examples:
   node bundle.mjs --ui panorama
   node bundle.mjs --flip -o ./distro-flip.html
+  node bundle.mjs --max-res 1200 -q 75
   node bundle.mjs --all
   node bundle.mjs
 `);
@@ -292,6 +452,11 @@ async function main() {
   let outArg = null;
   let forceBuild = false;
   let runCheck = false;
+  let maxRes = 1600;
+  let quality = 82;
+  let audioBitrate = '96k';
+  let format = 'webp';
+  let noCompress = false;
 
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
@@ -299,6 +464,24 @@ async function main() {
       forceBuild = true;
     } else if (a === '--check' || a === '-c') {
       runCheck = true;
+    } else if (a === '--no-compress') {
+      noCompress = true;
+    } else if (a === '--max-res' || a === '--res') {
+      maxRes = parseInt(args[++i], 10) || 1600;
+    } else if (a.startsWith('--max-res=') || a.startsWith('--res=')) {
+      maxRes = parseInt(a.split('=')[1], 10) || 1600;
+    } else if (a === '--quality' || a === '-q') {
+      quality = parseInt(args[++i], 10) || 82;
+    } else if (a.startsWith('--quality=') || a.startsWith('-q=')) {
+      quality = parseInt(a.split('=')[1], 10) || 82;
+    } else if (a === '--audio-bitrate' || a === '--audio') {
+      audioBitrate = args[++i];
+    } else if (a.startsWith('--audio-bitrate=') || a.startsWith('--audio=')) {
+      audioBitrate = a.split('=')[1];
+    } else if (a === '--format') {
+      format = args[++i];
+    } else if (a.startsWith('--format=')) {
+      format = a.split('=')[1];
     } else if (a === '--ui' || a === '-u') {
       uiArg = args[++i];
     } else if (a.startsWith('--ui=')) {
@@ -316,6 +499,8 @@ async function main() {
     }
   }
 
+  const compressOptions = { maxRes, quality, audioBitrate, format, noCompress };
+
   // Auto-build if dist is missing or requested
   if (!existsSync(DIST) || forceBuild) {
     console.log('📦 Building project via "npm run build"...');
@@ -324,7 +509,7 @@ async function main() {
 
   if (runCheck) {
     console.log('🧪 Running packaging integrity check across all UIs...');
-    const imageMap = buildImageMap();
+    const imageMap = buildImageMap(compressOptions);
     const storyBoard = prepareInlinedStoryBoard(imageMap);
     for (const key of Object.keys(UI_CONFIGS)) {
       const bundled = bundleUI(key, { isAll: true, imageMap, storyBoard });
@@ -349,7 +534,7 @@ async function main() {
   }
 
   console.log(`🔧 Packaging UI: ${selectedUI === 'all' ? 'All Prototypes' : selectedUI}...`);
-  const imageMap = buildImageMap();
+  const imageMap = buildImageMap(compressOptions);
   const storyBoard = prepareInlinedStoryBoard(imageMap);
 
   if (selectedUI === 'all') {
