@@ -50,6 +50,23 @@ function renderVerticalFeedDOM() {
       `;
     }
 
+    if (page.type === 'divider') {
+      return `
+        <section class="feed-section section-divider" id="section-${i}" data-index="${i}">
+          <div style="text-align:center;padding:2rem 1rem;">
+            <div style="font-size:2.5rem;margin-bottom:0.75rem;">✨ 🎭 ✨</div>
+            <span class="cover-badge" style="background:#ffe4e6;color:#be123c;padding:0.3rem 1rem;border-radius:999px;font-weight:700;">${page.chapterTag || 'Act'}</span>
+            <h2 class="cover-title" style="font-size:2rem;margin:0.75rem 0;color:#9f1239;">${page.title || page.navLabel}</h2>
+            <p class="cover-tagline" style="font-size:1.1rem;color:#475569;margin-bottom:0.5rem;">${page.narrative || ''}</p>
+            <p class="story-narrative-2" style="font-size:1rem;color:#e11d48;font-style:italic;">${page.narrative2 || ''}</p>
+          </div>
+          <div class="section-footer-cue">
+            <span>${page.cue || 'Scroll down to continue ▼'}</span>
+          </div>
+        </section>
+      `;
+    }
+
     if (page.type === 'end') {
       return `
         <section class="feed-section section-end" id="section-${i}" data-index="${i}">

@@ -44,8 +44,8 @@ try {
   const getIndicator = () => evalExpr(`document.getElementById('page-indicator').textContent.trim()`);
   const getActiveCount = () => evalExpr(`document.querySelectorAll('.c-flipbook__page.is-active').length`);
 
-  const storyPages = storyBoard.pages.filter(p => p.type === 'story');
-  const numSpreads = Math.ceil(storyPages.length / 2);
+  const innerPages = storyBoard.pages.slice(1, -1);
+  const numSpreads = Math.ceil(innerPages.length / 2);
 
   // Check initial state
   assert.strictEqual(await getIndicator(), 'Cover', 'Initial page must be Cover');
@@ -55,7 +55,7 @@ try {
   for (let s = 1; s <= numSpreads; s++) {
     const pLeft = (s - 1) * 2 + 1;
     const pRight = pLeft + 1;
-    const expected = pRight <= storyPages.length ? `Pages ${pLeft}-${pRight}` : `Page ${pLeft}`;
+    const expected = pRight <= innerPages.length ? `Pages ${pLeft}-${pRight}` : `Page ${pLeft}`;
     await evalExpr(`document.getElementById('btn-next').click()`);
     await new Promise(r => setTimeout(r, 1100));
     assert.strictEqual(await getIndicator(), expected, `Should be at ${expected}`);

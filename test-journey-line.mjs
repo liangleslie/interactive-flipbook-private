@@ -79,7 +79,8 @@ async function testViewport(width, height) {
       const N = nodes.length;
       const stationAlignments = [];
       for (let i = 0; i < N; i++) {
-        const s = i === 0 ? 0 : (i === N - 1 ? lastKf.s : (kfs[i * 2].s + kfs[i * 2 + 1].s) / 2);
+        const sceneKfs = kfs.filter(k => k.sceneIndex === i);
+        const s = i === 0 ? 0 : (i === N - 1 ? lastKf.s : (sceneKfs.length === 1 ? sceneKfs[0].s : (sceneKfs[0].s + sceneKfs[sceneKfs.length - 1].s) / 2));
         vp.scrollLeft = s;
         window.handleScroll();
         const pctNum = parseFloat(prog.style.width);

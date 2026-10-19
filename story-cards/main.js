@@ -54,6 +54,21 @@ function renderDeckDOM() {
       `;
     }
 
+    if (page.type === 'divider') {
+      return `
+        <section class="story-card card-divider ${i === 0 ? 'is-active' : ''}" data-index="${i}">
+          <div style="text-align:center;padding:1.5rem 0.5rem;">
+            <div style="font-size:2.5rem;margin-bottom:0.75rem;">✨ 🎭 ✨</div>
+            <span class="cover-badge" style="background:#ffe4e6;color:#be123c;padding:0.3rem 1rem;border-radius:999px;font-weight:700;">${page.chapterTag || 'Act'}</span>
+            <h2 class="card-title" style="font-size:2rem;margin:0.75rem 0;color:#9f1239;">${page.title || page.navLabel}</h2>
+            <p class="card-narrative" style="font-size:1.1rem;color:#475569;margin-bottom:0.5rem;">${page.narrative || ''}</p>
+            <p class="story-narrative-2" style="font-size:1rem;color:#e11d48;font-style:italic;">${page.narrative2 || ''}</p>
+            <p class="deck-instruction" style="margin-top:1rem;">${page.cue || 'Tap right to flip card ➔'}</p>
+          </div>
+        </section>
+      `;
+    }
+
     if (page.type === 'end') {
       return `
         <section class="story-card card-end ${i === 0 ? 'is-active' : ''}" data-index="${i}">

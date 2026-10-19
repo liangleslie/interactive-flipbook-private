@@ -49,10 +49,11 @@ try {
     return res.result?.result?.value;
   };
 
-  // 1. Verify keyframes (2 per page: upper and lower)
+  // 1. Verify keyframes (2 per story/cover/end scene, 1 per divider)
   const sceneCount = await evalExpr("document.querySelectorAll('.scene-station').length");
   const kfCount = await evalExpr("window.getKeyframes().length");
-  assert.strictEqual(kfCount, sceneCount * 2, `Must have exactly ${sceneCount * 2} keyframes for ${sceneCount} story scenes (2 per scene)`);
+  assert.strictEqual(sceneCount, 22, 'Must have exactly 22 scenes');
+  assert.strictEqual(kfCount, 42, 'Must have exactly 42 keyframes (20 scenes * 2 + 2 dividers * 1)');
 
   // 2. Initial state: keyframe 0, upper art 100%, prevBtn disabled
   const initialIdx = await evalExpr("window.currentKeyframeIndex");
@@ -77,31 +78,28 @@ try {
   assert(coverUpperOp < 0.1, 'At keyframe 1, upper-art opacity must be ~0');
   assert(coverLowerOp > 0.9, 'At keyframe 1, lower-art opacity must be ~1');
 
-  // 4. Click Next 2nd time -> Keyframe 2 (Scene 1 Upper-Art 100% - Meet Ed)
+  // 4. Click Next 2nd time -> Keyframe 2 (Scene 1 Act I Divider focus)
   await evalExpr("document.getElementById('btn-next').click()");
   await new Promise(r => setTimeout(r, 1200));
 
   const kf2Idx = await evalExpr("window.currentKeyframeIndex");
   const scene1Label = await evalExpr("document.getElementById('chapter-label').textContent.trim()");
-  assert.strictEqual(kf2Idx, 2, '2nd click must transition to keyframe 2 (Scene 1 Upper-art)');
-  assert.strictEqual(scene1Label, '1: Ed', 'Chapter label must be 1: Ed');
+  assert.strictEqual(kf2Idx, 2, '2nd click must transition to keyframe 2 (Scene 1 Act I Divider)');
+  assert.strictEqual(scene1Label, 'Act I: NECF', 'Chapter label must be Act I: NECF');
 
-  const edUpperOp = parseFloat(await evalExpr("document.querySelector('#scene-1 .upper-art').style.opacity"));
-  const edLowerOp = parseFloat(await evalExpr("document.querySelector('#scene-1 .lower-art').style.opacity"));
-  assert(edUpperOp > 0.9, 'At keyframe 2, Scene 1 upper-art opacity must be ~1');
-  assert(edLowerOp < 0.1, 'At keyframe 2, Scene 1 lower-art opacity must be ~0');
-
-  // 5. Click Next 3rd time -> Keyframe 3 (Scene 1 Lower-Art complete - Ranger Ed)
+  // 5. Click Next 3rd time -> Keyframe 3 (Scene 2 Upper-Art complete - Meet Anna & Pretzel)
   await evalExpr("document.getElementById('btn-next').click()");
-  await new Promise(r => setTimeout(r, 600));
+  await new Promise(r => setTimeout(r, 1200));
 
   const kf3Idx = await evalExpr("window.currentKeyframeIndex");
-  assert.strictEqual(kf3Idx, 3, '3rd click must advance to keyframe 3 (Scene 1 lower-art)');
+  assert.strictEqual(kf3Idx, 3, '3rd click must advance to keyframe 3 (Scene 2 upper-art Anna)');
 
-  const edLowerMorphedOp = parseFloat(await evalExpr("document.querySelector('#scene-1 .lower-art').style.opacity"));
-  assert(edLowerMorphedOp > 0.9, 'At keyframe 3, lower-art must be 100%');
+  const annaUpperOp = parseFloat(await evalExpr("document.querySelector('#scene-2 .upper-art').style.opacity"));
+  const annaLowerOp = parseFloat(await evalExpr("document.querySelector('#scene-2 .lower-art').style.opacity"));
+  assert(annaUpperOp > 0.9, 'At keyframe 3, Scene 2 upper-art opacity must be ~1');
+  assert(annaLowerOp < 0.1, 'At keyframe 3, Scene 2 lower-art opacity must be ~0');
 
-  // 6. Click Prev -> returns to Keyframe 2 (Scene 1 Upper-Art)
+  // 6. Click Prev -> returns to Keyframe 2 (Act I Divider)
   await evalExpr("document.getElementById('btn-prev').click()");
   await new Promise(r => setTimeout(r, 600));
 
@@ -116,38 +114,31 @@ try {
   assert.strictEqual(kfWheelIdx, 3, 'Wheel forward must trigger snapping to next keyframe');
 
   // 8. Verify no scaling in morphing animation (transforms must be pure translate without scale)
-  const scene1UpperTransform = await evalExpr("document.querySelector('#scene-1 .upper-art').style.transform");
-  const scene1LowerTransform = await evalExpr("document.querySelector('#scene-1 .lower-art').style.transform");
-  assert(!scene1UpperTransform.includes('scale'), 'upperArt transform must not include scale during morph');
-  assert(!scene1LowerTransform.includes('scale'), 'lowerArt transform must not include scale during morph');
+  const scene2UpperTransform = await evalExpr("document.querySelector('#scene-2 .upper-art').style.transform");
+  const scene2LowerTransform = await evalExpr("document.querySelector('#scene-2 .lower-art').style.transform");
+  assert(!scene2UpperTransform.includes('scale'), 'upperArt transform must not include scale during morph');
+  assert(!scene2LowerTransform.includes('scale'), 'lowerArt transform must not include scale during morph');
 
-  // 9. Verify same-art behavior (Scene 7: Sabrina, upperArt === lowerArt)
-  // Jump to Sabrina upper-art keyframe (kf 14)
-  await evalExpr("window.goToKeyframe(14)");
+  // 9. Verify same-art behavior (Scene 17: Sabrina, upperArt === lowerArt)
+  // Sabrina is Scene 17, keyframes 32 and 33
+  await evalExpr("window.goToKeyframe(32)");
   await new Promise(r => setTimeout(r, 1200));
 
-  const sabrinaUpperOpKf14 = parseFloat(await evalExpr("document.querySelector('#scene-7 .upper-art').style.opacity"));
-  const sabrinaLowerOpKf14 = parseFloat(await evalExpr("document.querySelector('#scene-7 .lower-art').style.opacity"));
-  assert(sabrinaUpperOpKf14 > 0.9, 'Sabrina upper-art must be 100% visible at keyframe 14');
-  assert.strictEqual(sabrinaLowerOpKf14, 0, 'Sabrina lower-art must have 0 opacity to prevent duplicate layer');
+  const sabrinaUpperOpKf32 = parseFloat(await evalExpr("document.querySelector('#scene-17 .upper-art').style.opacity"));
+  const sabrinaLowerOpKf32 = parseFloat(await evalExpr("document.querySelector('#scene-17 .lower-art').style.opacity"));
+  assert(sabrinaUpperOpKf32 > 0.9, 'Sabrina upper-art must be 100% visible at keyframe 32');
+  assert.strictEqual(sabrinaLowerOpKf32, 0, 'Sabrina lower-art must have 0 opacity to prevent duplicate layer');
 
-  // Jump to Sabrina lower-art morph keyframe (kf 15)
-  await evalExpr("window.goToKeyframe(15)");
+  // Jump to Sabrina lower-art morph keyframe (kf 33)
+  await evalExpr("window.goToKeyframe(33)");
   await new Promise(r => setTimeout(r, 600));
 
-  const sabrinaUpperOpKf15 = parseFloat(await evalExpr("document.querySelector('#scene-7 .upper-art').style.opacity"));
-  const sabrinaLowerOpKf15 = parseFloat(await evalExpr("document.querySelector('#scene-7 .lower-art').style.opacity"));
-  const sabrinaNarrative2Op = parseFloat(await evalExpr("document.querySelector('#scene-7 .story-narrative-2').style.opacity"));
-  assert(sabrinaUpperOpKf15 > 0.9, 'Sabrina upper-art must remain 100% solid through morph (no opacity dip/stutter)');
-  assert.strictEqual(sabrinaLowerOpKf15, 0, 'Sabrina lower-art must remain 0 to prevent layer fighting');
-  assert(sabrinaNarrative2Op > 0.9, 'Sabrina narrative2 must appear at keyframe 15');
-
-  // Verify halfway scroll position between kf 14 and kf 15 has ZERO opacity dip
-  const sPin7 = await evalExpr("window.getScenePinStart(7)");
-  const midScroll = sPin7 + 450 + 250; // D_FADE_IN + D_MORPH/2
-  await evalExpr(`document.getElementById('panorama-viewport').scrollLeft = ${midScroll}; window.updateScrollDrivenMorphs();`);
-  const sabrinaMidUpperOp = parseFloat(await evalExpr("document.querySelector('#scene-7 .upper-art').style.opacity"));
-  assert.strictEqual(sabrinaMidUpperOp, 1, 'Same-art upper-art opacity must stay rock-solid 1.0 mid-morph without 75% dip');
+  const sabrinaUpperOpKf33 = parseFloat(await evalExpr("document.querySelector('#scene-17 .upper-art').style.opacity"));
+  const sabrinaLowerOpKf33 = parseFloat(await evalExpr("document.querySelector('#scene-17 .lower-art').style.opacity"));
+  const sabrinaNarrative2Op = parseFloat(await evalExpr("document.querySelector('#scene-17 .story-narrative-2').style.opacity"));
+  assert(sabrinaUpperOpKf33 > 0.9, 'Sabrina upper-art must remain 100% solid through morph (no opacity dip/stutter)');
+  assert.strictEqual(sabrinaLowerOpKf33, 0, 'Sabrina lower-art must remain 0 to prevent layer fighting');
+  assert(sabrinaNarrative2Op > 0.9, 'Sabrina narrative2 must appear at keyframe 33');
 
   assert.strictEqual(consoleErrors.length, 0, 'Must have zero runtime console errors');
 

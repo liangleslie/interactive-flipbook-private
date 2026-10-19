@@ -43,6 +43,20 @@ function renderSidescrollCardsDOM() {
       `;
     }
 
+    if (page.type === 'divider') {
+      return `
+        <section class="strip-card card-divider" data-index="${i}" id="card-${i}">
+          <div class="card-inner cover-inner">
+            <span class="cover-badge">${page.chapterTag || 'Act'}</span>
+            <h2 class="cover-title">${page.title || page.navLabel}</h2>
+            <p class="cover-author">${page.narrative || ''}</p>
+            <p class="story-narrative-2">${page.narrative2 || ''}</p>
+            <div class="cover-tap-hint">${page.cue || 'Swipe sideways to explore ➔'}</div>
+          </div>
+        </section>
+      `;
+    }
+
     if (page.type === 'end') {
       return `
         <section class="strip-card card-cover card-back-cover" data-index="${i}" id="card-${i}">
@@ -70,7 +84,6 @@ function renderSidescrollCardsDOM() {
       <section class="strip-card card-story card-story-${page.id || i}" data-index="${i}" id="card-${i}">
         <div class="card-inner story-content">
           <div class="card-badge-row">
-            <span class="page-number">${page.pageNumber || i}</span>
             <span class="card-chapter-tag">${page.chapterTag || page.text1 || `Chapter ${page.pageNumber}`}</span>
           </div>
           <h2 class="story-title">${page.title}</h2>

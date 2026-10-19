@@ -33,6 +33,21 @@ if (flipbookContainer) {
       `;
     }
 
+    if (page.type === 'divider') {
+      const sideClass = (idx % 2 === 1) ? 'page-left' : 'page-right';
+      return `
+        <div class="c-flipbook__page page-divider ${sideClass}">
+          <div class="story-inner" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;height:100%;padding:2rem;">
+            <div style="font-size:2.5rem;margin-bottom:1rem;">✨ 🎭 ✨</div>
+            <span class="card-chapter-tag">${page.chapterTag || 'Act'}</span>
+            <h2 class="page-title" style="font-size:1.8rem;margin:0.5rem 0;">${page.title || page.navLabel}</h2>
+            <p class="page-story-text" style="font-size:1.1rem;margin:0.5rem 0;">${page.narrative || ''}</p>
+            <p class="story-narrative-2" style="font-size:1rem;color:#e11d48;font-style:italic;">${page.narrative2 || ''}</p>
+          </div>
+        </div>
+      `;
+    }
+
     if (page.type === 'end') {
       return `
         <div class="c-flipbook__page page-cover page-back-cover">
@@ -59,7 +74,7 @@ if (flipbookContainer) {
     return `
       <div class="c-flipbook__page page-story ${sideClass}">
         <div class="story-content">
-          <span class="page-number">${page.pageNumber || idx}</span>
+          <span class="card-chapter-tag">${page.chapterTag || `Chapter ${idx}`}</span>
           <h3>${page.title}</h3>
           <p>${page.narrative || page.text2 || ''}</p>
           <div class="page-illustration">

@@ -48,12 +48,13 @@ function getJourneyProgressPct(S) {
 
   const stationS = [];
   for (let i = 0; i < N; i++) {
-    if (i === 0) {
-      stationS.push(0);
-    } else if (i === N - 1) {
-      stationS.push(kfs[kfs.length - 1].s);
+    const sceneKfs = kfs.filter(k => k.sceneIndex === i);
+    if (!sceneKfs.length) {
+      stationS.push(getScenePinStart(i));
+    } else if (sceneKfs.length === 1) {
+      stationS.push(sceneKfs[0].s);
     } else {
-      stationS.push((kfs[i * 2].s + kfs[i * 2 + 1].s) / 2);
+      stationS.push((sceneKfs[0].s + sceneKfs[sceneKfs.length - 1].s) / 2);
     }
   }
 
@@ -123,6 +124,25 @@ function renderPanoramaDOM() {
       `;
     }
 
+    if (page.type === 'divider') {
+      return `
+        <section class="scene-station scene-divider scene-${page.id || i}" id="scene-${i}" data-index="${i}">
+          <div class="station-card divider-card">
+            <div class="station-flow divider-flow">
+              <div class="act-curtain-icon" aria-hidden="true">✨ 🎭 ✨</div>
+              <span class="scene-badge act-badge">${page.chapterTag || 'Act'}</span>
+              <h2 class="act-title">${page.title || page.navLabel}</h2>
+              ${page.narrative ? `<p class="act-narrative">${page.narrative}</p>` : ''}
+              ${page.narrative2 ? `<p class="story-narrative-2 act-narrative-2">${page.narrative2}</p>` : ''}
+              <div class="scroll-cue">
+                <span>${page.cue || 'Scroll to continue ➔'}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
     if (page.type === 'end') {
       return `
         <section class="scene-station scene-end" id="scene-${i}" data-index="${i}">
@@ -153,7 +173,6 @@ function renderPanoramaDOM() {
         <div class="station-card">
           <div class="station-flow">
             <div class="chapter-badge-row">
-              <span class="page-number">${page.pageNumber || i}</span>
               <span class="chapter-tag">${page.chapterTag || page.text1 || `Chapter ${page.pageNumber}`}</span>
             </div>
             <h2 class="scene-heading">${page.title}</h2>
@@ -195,6 +214,9 @@ let D_COVER_POST_LINGER = 140;
 let D_COVER_FADE_OUT = 200;
 let D_COVER_TOTAL = 800;
 
+let D_DIVIDER_LINGER = 320;
+let D_DIVIDER_TOTAL = 720;
+
 let D_END_PRE_LINGER = 100;
 let D_END_MORPH = 320;
 let D_END_POST_LINGER = 120;
@@ -215,6 +237,9 @@ function updateResponsiveBudgets() {
     D_COVER_FADE_OUT = 120;
     D_COVER_TOTAL = D_COVER_PRE_LINGER + D_COVER_MORPH + D_COVER_POST_LINGER + D_COVER_FADE_OUT; // 500px
 
+    D_DIVIDER_LINGER = 200;
+    D_DIVIDER_TOTAL = D_FADE_IN + D_DIVIDER_LINGER + D_FADE_OUT; // 440px
+
     D_END_PRE_LINGER = 80;
     D_END_MORPH = 200;
     D_END_POST_LINGER = 100;
@@ -231,6 +256,9 @@ function updateResponsiveBudgets() {
     D_COVER_POST_LINGER = 140;
     D_COVER_FADE_OUT = 200;
     D_COVER_TOTAL = D_COVER_PRE_LINGER + D_COVER_MORPH + D_COVER_POST_LINGER + D_COVER_FADE_OUT; // 800px
+
+    D_DIVIDER_LINGER = 320;
+    D_DIVIDER_TOTAL = D_FADE_IN + D_DIVIDER_LINGER + D_FADE_OUT; // 720px
 
     D_END_PRE_LINGER = 100;
     D_END_MORPH = 320;
@@ -363,7 +391,7 @@ function getActiveSceneIndex(S) {
   for (let i = 0; i < scenes.length - 1; i++) {
     const Si = getScenePinStart(i);
     const Snext = getScenePinStart(i + 1);
-    const pinDist = i === 0 ? D_COVER_TOTAL : (i === scenes.length - 1 ? D_END_TOTAL : D_TOTAL);
+    const pinDist = i === 0 ? D_COVER_TOTAL : (i === scenes.length - 1 ? D_END_TOTAL : (pages[i]?.type === 'divider' ? D_DIVIDER_TOTAL : D_TOTAL));
     const midpoint = (Si + pinDist + Snext) / 2;
     if (S < midpoint) return i;
   }
@@ -390,6 +418,7 @@ function getKeyframes() {
   if (!scenes.length) return kfs;
 
   scenes.forEach((_, i) => {
+    const page = pages[i];
     if (i === 0) {
       // Cover (Scene 0)
       kfs.push({ sceneIndex: 0, phase: 'upper', s: 0, label: sceneNames[0] || 'Start' });
@@ -399,6 +428,10 @@ function getKeyframes() {
       const pinStart = getScenePinStart(i);
       kfs.push({ sceneIndex: i, phase: 'upper', s: pinStart, label: sceneNames[i] || 'The End' });
       kfs.push({ sceneIndex: i, phase: 'lower', s: pinStart + D_END_PRE_LINGER + D_END_MORPH, label: sceneNames[i] || 'The End' });
+    } else if (page?.type === 'divider') {
+      // Act Divider: single focused keyframe
+      const pinStart = getScenePinStart(i);
+      kfs.push({ sceneIndex: i, phase: 'focus', s: pinStart + D_FADE_IN, label: sceneNames[i] || page.navLabel || page.chapterTag || `Act ${i}` });
     } else {
       // Story station
       const pinStart = getScenePinStart(i);
@@ -646,7 +679,7 @@ function getBackgroundShift(S) {
   let shift = 0;
   for (let i = 0; i < scenes.length; i++) {
     const S_pin = getScenePinStart(i);
-    const pinDist = i === 0 ? D_COVER_TOTAL : (i === scenes.length - 1 ? D_END_TOTAL : D_TOTAL);
+    const pinDist = i === 0 ? D_COVER_TOTAL : (i === scenes.length - 1 ? D_END_TOTAL : (pages[i]?.type === 'divider' ? D_DIVIDER_TOTAL : D_TOTAL));
     const delta = S - S_pin;
     if (delta <= 0) {
       break;
@@ -668,10 +701,40 @@ function updateScrollDrivenMorphs() {
   const bgShift = getBackgroundShift(S);
   const visualBgX = Math.round(bgShift - S);
 
-  const backdrop = document.querySelector('.panorama-backdrop-layer');
-  if (backdrop) {
-    backdrop.style.backgroundPositionX = `${visualBgX}px`;
+  const backdropLayers = Array.from(document.querySelectorAll('.panorama-backdrop-layer'));
+  if (backdropLayers.length > 0) {
+    backdropLayers.forEach((layer) => {
+      layer.style.backgroundPositionX = `${visualBgX}px`;
+    });
+
+    if (backdropLayers.length > 1) {
+      // Dynamically locate transition boundary between Act I and Act II backgrounds
+      let act1EndIdx = 0;
+      for (let idx = 0; idx < pages.length; idx++) {
+        if ((pages[idx].backgroundArt || '').includes('boardgame')) {
+          act1EndIdx = idx;
+        }
+      }
+      const act2StartIdx = Math.min(pages.length - 1, act1EndIdx + 1);
+      const S_trans_start = getScenePinStart(act1EndIdx) + D_TOTAL;
+      const S_trans_end = getScenePinStart(act2StartIdx);
+
+      if (S <= S_trans_start) {
+        backdropLayers[0].style.opacity = '1';
+        backdropLayers[1].style.opacity = '0';
+      } else if (S >= S_trans_end) {
+        backdropLayers[0].style.opacity = '0';
+        backdropLayers[1].style.opacity = '1';
+      } else {
+        const t = (S - S_trans_start) / Math.max(1, S_trans_end - S_trans_start);
+        backdropLayers[0].style.opacity = (1 - t).toFixed(3);
+        backdropLayers[1].style.opacity = t.toFixed(3);
+      }
+    } else {
+      backdropLayers[0].style.opacity = '1';
+    }
   }
+
   const spriteLayer = document.querySelector('.sprite-track-layer');
   if (spriteLayer) {
     spriteLayer.style.transform = `translateX(${visualBgX}px)`;
@@ -803,6 +866,43 @@ function updateScrollDrivenMorphs() {
         narrative2Opacity = 0;
         phase = 'outro';
       }
+    } else if (pages[i]?.type === 'divider') {
+      // Act divider station
+      if (delta < 0) {
+        backingOpacity = 0;
+        textOpacity = 0;
+        charScale = 1;
+        narrative2Opacity = 0;
+        phase = 'intro';
+      } else if (delta < D_FADE_IN) {
+        const p = delta / D_FADE_IN;
+        const smoothIn = Math.sin((p * Math.PI) / 2);
+        backingOpacity = smoothIn;
+        textOpacity = smoothIn;
+        charScale = 1;
+        narrative2Opacity = smoothIn;
+        phase = 'backing-fade-in';
+      } else if (delta < D_FADE_IN + D_DIVIDER_LINGER) {
+        backingOpacity = 1;
+        textOpacity = 1;
+        charScale = 1;
+        narrative2Opacity = 1;
+        phase = 'focus';
+      } else if (delta < D_DIVIDER_TOTAL) {
+        const rawOutro = (delta - (D_FADE_IN + D_DIVIDER_LINGER)) / D_FADE_OUT;
+        const smoothOutro = Math.sin((rawOutro * Math.PI) / 2);
+        backingOpacity = 1 - smoothOutro;
+        textOpacity = 1 - smoothOutro;
+        charScale = 1;
+        narrative2Opacity = 1 - smoothOutro;
+        phase = 'backing-fade-out';
+      } else {
+        backingOpacity = 0;
+        textOpacity = 0;
+        charScale = 1;
+        narrative2Opacity = 0;
+        phase = 'outro';
+      }
     } else {
       // Middle story stations
       if (delta < 0) {
@@ -893,11 +993,11 @@ function updateScrollDrivenMorphs() {
       }
       upper.style.transform = 'translate(-50%, -50%)';
       lower.style.transform = 'translate(-50%, -50%)';
+    }
 
-      if (narrative2) {
-        narrative2.style.opacity = narrative2Opacity.toFixed(3);
-        narrative2.style.transform = `translateY(${(6 * (1 - narrative2Opacity)).toFixed(1)}px)`;
-      }
+    if (narrative2) {
+      narrative2.style.opacity = narrative2Opacity.toFixed(3);
+      narrative2.style.transform = `translateY(${(6 * (1 - narrative2Opacity)).toFixed(1)}px)`;
     }
   });
 }
@@ -1229,45 +1329,61 @@ viewport?.addEventListener('scroll', () => {
   }
 }, { passive: true });
 
-// Sync panorama dimensions with the image in index.html (adapting to any image width / aspect ratio)
-const backdropImg = document.getElementById('panorama-backdrop-img');
-const backdropLayer = document.querySelector('.panorama-backdrop-layer');
+// Sync panorama dimensions with the images in index.html (adapting to any image width / aspect ratio)
+const backdropImgs = [
+  document.getElementById('panorama-backdrop-img-0'),
+  document.getElementById('panorama-backdrop-img-1'),
+  document.getElementById('panorama-backdrop-img')
+].filter(Boolean);
 
 function syncPanoramaDimensions() {
-  if (!backdropImg) return;
-  let currentSrc = backdropImg.getAttribute('src') || '';
-  if (currentSrc.includes('data:image/')) {
-    currentSrc = currentSrc.slice(currentSrc.indexOf('data:image/'));
-    if (backdropImg.getAttribute('src') !== currentSrc) {
-      backdropImg.src = currentSrc;
+  const primaryImg = backdropImgs[0];
+  if (primaryImg) {
+    let currentSrc = primaryImg.getAttribute('src') || '';
+    if (currentSrc.includes('data:image/')) {
+      currentSrc = currentSrc.slice(currentSrc.indexOf('data:image/'));
+      if (primaryImg.getAttribute('src') !== currentSrc) {
+        primaryImg.src = currentSrc;
+      }
+    }
+
+    const nw = primaryImg.naturalWidth;
+    const nh = primaryImg.naturalHeight;
+    if (nw && nh) {
+      const aspect = nw / nh;
+      const computedWidth = Math.round(window.innerHeight * aspect);
+      document.documentElement.style.setProperty('--panorama-image-width', `${computedWidth}px`);
+      document.documentElement.style.setProperty('--panorama-aspect', `${aspect.toFixed(3)}`);
     }
   }
 
-  const nw = backdropImg.naturalWidth;
-  const nh = backdropImg.naturalHeight;
-  if (nw && nh) {
-    const aspect = nw / nh;
-    const computedWidth = Math.round(window.innerHeight * aspect);
-    document.documentElement.style.setProperty('--panorama-image-width', `${computedWidth}px`);
-    document.documentElement.style.setProperty('--panorama-aspect', `${aspect.toFixed(3)}`);
-  }
-  if (currentSrc && backdropLayer) {
-    backdropLayer.style.setProperty('--panorama-bg', `url("${currentSrc}")`);
-    backdropLayer.style.backgroundImage = `url("${currentSrc}")`;
-  }
+  backdropImgs.forEach((img, idx) => {
+    let currentSrc = img.getAttribute('src') || '';
+    if (currentSrc.includes('data:image/')) {
+      currentSrc = currentSrc.slice(currentSrc.indexOf('data:image/'));
+      if (img.getAttribute('src') !== currentSrc) {
+        img.src = currentSrc;
+      }
+    }
+    const layer = document.getElementById(`panorama-backdrop-layer-${idx}`) || document.querySelector(`.act-backdrop-${idx}`) || document.querySelector('.panorama-backdrop-layer');
+    if (currentSrc && layer) {
+      layer.style.setProperty(`--panorama-bg-${idx}`, `url("${currentSrc}")`);
+      layer.style.backgroundImage = `url("${currentSrc}")`;
+    }
+  });
 
   updateResponsiveBudgets();
   recalculateLyricAnchors();
   if (viewport) updateLyricsParallax(viewport.scrollLeft);
 }
 
-if (backdropImg) {
-  if (backdropImg.complete) {
+backdropImgs.forEach((img) => {
+  if (img.complete) {
     syncPanoramaDimensions();
   } else {
-    backdropImg.addEventListener('load', syncPanoramaDimensions);
+    img.addEventListener('load', syncPanoramaDimensions);
   }
-}
+});
 
 updateResponsiveBudgets();
 initLyricsEngine();
