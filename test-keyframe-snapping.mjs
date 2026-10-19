@@ -140,10 +140,27 @@ try {
   assert.strictEqual(sabrinaLowerOpKf33, 0, 'Sabrina lower-art must remain 0 to prevent layer fighting');
   assert(sabrinaNarrative2Op > 0.9, 'Sabrina narrative2 must appear at keyframe 33');
 
+  // 10. Verify clicking landmark-nodes navigates to exact scene (testing Chapter 7 and all others)
+  const nodeCount = await evalExpr("document.querySelectorAll('.landmark-node').length");
+  for (let i = 0; i < nodeCount; i++) {
+    await evalExpr(`document.querySelectorAll('.landmark-node')[${i}].click()`);
+    await new Promise(r => setTimeout(r, 200));
+    const activeScene = await evalExpr("window.currentKeyframeIndex");
+    const kfs = await evalExpr("window.getKeyframes()");
+    const targetKf = kfs[activeScene];
+    assert.strictEqual(targetKf.sceneIndex, i, `Clicking landmark-node ${i} must activate scene ${i}, but got scene ${targetKf.sceneIndex}`);
+  }
+
+  // Specifically check Chapter 7 (Scene 9: 7: Ed)
+  await evalExpr("document.querySelectorAll('.landmark-node')[9].click()");
+  await new Promise(r => setTimeout(r, 400));
+  const edLabel = await evalExpr("document.getElementById('chapter-label').textContent.trim()");
+  assert.strictEqual(edLabel, '7: Ed', `Clicking Chapter 7 node must show '7: Ed', got '${edLabel}'`);
+
   assert.strictEqual(consoleErrors.length, 0, 'Must have zero runtime console errors');
 
   ws.close();
-  console.log('✅ test-keyframe-snapping passed: zero-scale morph and same-art stutter elimination verified.');
+  console.log('✅ test-keyframe-snapping passed: landmark navigation, zero-scale morph and same-art stutter elimination verified.');
 } finally {
   chrome.kill();
 }

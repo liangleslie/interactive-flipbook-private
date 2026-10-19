@@ -543,8 +543,11 @@ function goToPrevKeyframe() {
 window.goToPrevKeyframe = goToPrevKeyframe;
 
 function scrollToScene(sceneIdx) {
-  const targetKfIdx = sceneIdx * 2;
-  goToKeyframe(targetKfIdx);
+  const kfs = getKeyframes();
+  const targetKfIdx = kfs.findIndex(k => k.sceneIndex === sceneIdx);
+  if (targetKfIdx !== -1) {
+    goToKeyframe(targetKfIdx);
+  }
 }
 window.scrollToScene = scrollToScene;
 
@@ -561,7 +564,7 @@ nextBtn?.addEventListener('click', (e) => {
 
 landmarkNodes.forEach((node, idx) => {
   node.addEventListener('click', () => {
-    goToKeyframe(idx * 2);
+    scrollToScene(idx);
   });
 });
 
@@ -709,9 +712,11 @@ function updateScrollDrivenMorphs() {
 
     if (backdropLayers.length > 1) {
       // Dynamically locate transition boundary between Act I and Act II backgrounds
+      // ponytail: in distro, backgroundArt is inlined base64, so compare against initial page's backgroundArt
+      const act1Bg = pages[0]?.backgroundArt;
       let act1EndIdx = 0;
       for (let idx = 0; idx < pages.length; idx++) {
-        if ((pages[idx].backgroundArt || '').includes('boardgame')) {
+        if (pages[idx].backgroundArt && pages[idx].backgroundArt === act1Bg) {
           act1EndIdx = idx;
         }
       }
@@ -1008,11 +1013,14 @@ morphTargets.forEach((target) => {
     e.stopPropagation();
     const scene = target.closest('.scene-station');
     const sceneIdx = parseInt(scene?.getAttribute('data-index') || '0', 10);
-    const upperKf = sceneIdx * 2;
-    const lowerKf = sceneIdx * 2 + 1;
+    const kfs = getKeyframes();
+    const sceneKfs = kfs.map((k, idx) => ({ ...k, kfIdx: idx })).filter(k => k.sceneIndex === sceneIdx);
+    if (!sceneKfs.length) return;
+    const upperKf = sceneKfs[0].kfIdx;
+    const lowerKf = sceneKfs.length > 1 ? sceneKfs[1].kfIdx : upperKf;
 
     // Toggle between upper-art and lower-art keyframes at constant speed
-    if (currentKeyframeIndex === upperKf) {
+    if (currentKeyframeIndex === upperKf && upperKf !== lowerKf) {
       goToKeyframe(lowerKf);
     } else {
       goToKeyframe(upperKf);
