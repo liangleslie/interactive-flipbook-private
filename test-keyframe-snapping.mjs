@@ -52,8 +52,8 @@ try {
   // 1. Verify keyframes (2 per story/cover/end scene, 1 per divider)
   const sceneCount = await evalExpr("document.querySelectorAll('.scene-station').length");
   const kfCount = await evalExpr("window.getKeyframes().length");
-  assert.strictEqual(sceneCount, 22, 'Must have exactly 22 scenes');
-  assert.strictEqual(kfCount, 42, 'Must have exactly 42 keyframes (20 scenes * 2 + 2 dividers * 1)');
+  assert.strictEqual(sceneCount, 23, 'Must have exactly 23 scenes');
+  assert.strictEqual(kfCount, 44, 'Must have exactly 44 keyframes (21 scenes * 2 + 2 dividers * 1)');
 
   // 2. Initial state: keyframe 0, upper art 100%, prevBtn disabled
   const initialIdx = await evalExpr("window.currentKeyframeIndex");
@@ -119,28 +119,28 @@ try {
   assert(!scene2UpperTransform.includes('scale'), 'upperArt transform must not include scale during morph');
   assert(!scene2LowerTransform.includes('scale'), 'lowerArt transform must not include scale during morph');
 
-  // 9. Verify same-art behavior (Scene 17: Sabrina, upperArt === lowerArt)
-  // Sabrina is Scene 17, keyframes 32 and 33
-  await evalExpr("window.goToKeyframe(32)");
+  // 9. Verify same-art behavior (Scene 18: Sabrina, upperArt === lowerArt)
+  // Sabrina is Scene 18, keyframes 34 and 35
+  await evalExpr("window.goToKeyframe(34)");
   await new Promise(r => setTimeout(r, 1200));
 
-  const sabrinaUpperOpKf32 = parseFloat(await evalExpr("document.querySelector('#scene-17 .upper-art').style.opacity"));
-  const sabrinaLowerOpKf32 = parseFloat(await evalExpr("document.querySelector('#scene-17 .lower-art').style.opacity"));
-  assert(sabrinaUpperOpKf32 > 0.9, 'Sabrina upper-art must be 100% visible at keyframe 32');
-  assert.strictEqual(sabrinaLowerOpKf32, 0, 'Sabrina lower-art must have 0 opacity to prevent duplicate layer');
+  const sabrinaUpperOpKf34 = parseFloat(await evalExpr("document.querySelector('#scene-18 .upper-art').style.opacity"));
+  const sabrinaLowerOpKf34 = parseFloat(await evalExpr("document.querySelector('#scene-18 .lower-art').style.opacity"));
+  assert(sabrinaUpperOpKf34 > 0.9, 'Sabrina upper-art must be 100% visible at keyframe 34');
+  assert.strictEqual(sabrinaLowerOpKf34, 0, 'Sabrina lower-art must have 0 opacity to prevent duplicate layer');
 
-  // Jump to Sabrina lower-art morph keyframe (kf 33)
-  await evalExpr("window.goToKeyframe(33)");
+  // Jump to Sabrina lower-art morph keyframe (kf 35)
+  await evalExpr("window.goToKeyframe(35)");
   await new Promise(r => setTimeout(r, 600));
 
-  const sabrinaUpperOpKf33 = parseFloat(await evalExpr("document.querySelector('#scene-17 .upper-art').style.opacity"));
-  const sabrinaLowerOpKf33 = parseFloat(await evalExpr("document.querySelector('#scene-17 .lower-art').style.opacity"));
-  const sabrinaNarrative2Op = parseFloat(await evalExpr("document.querySelector('#scene-17 .story-narrative-2').style.opacity"));
-  assert(sabrinaUpperOpKf33 > 0.9, 'Sabrina upper-art must remain 100% solid through morph (no opacity dip/stutter)');
-  assert.strictEqual(sabrinaLowerOpKf33, 0, 'Sabrina lower-art must remain 0 to prevent layer fighting');
-  assert(sabrinaNarrative2Op > 0.9, 'Sabrina narrative2 must appear at keyframe 33');
+  const sabrinaUpperOpKf35 = parseFloat(await evalExpr("document.querySelector('#scene-18 .upper-art').style.opacity"));
+  const sabrinaLowerOpKf35 = parseFloat(await evalExpr("document.querySelector('#scene-18 .lower-art').style.opacity"));
+  const sabrinaNarrative2Op = parseFloat(await evalExpr("document.querySelector('#scene-18 .story-narrative-2').style.opacity"));
+  assert(sabrinaUpperOpKf35 > 0.9, 'Sabrina upper-art must remain 100% solid through morph (no opacity dip/stutter)');
+  assert.strictEqual(sabrinaLowerOpKf35, 0, 'Sabrina lower-art must remain 0 to prevent layer fighting');
+  assert(sabrinaNarrative2Op > 0.9, 'Sabrina narrative2 must appear at keyframe 35');
 
-  // 10. Verify clicking landmark-nodes navigates to exact scene (testing Chapter 7 and all others)
+  // 10. Verify clicking landmark-nodes navigates to exact scene (testing Chapter 8 and all others)
   const nodeCount = await evalExpr("document.querySelectorAll('.landmark-node').length");
   for (let i = 0; i < nodeCount; i++) {
     await evalExpr(`document.querySelectorAll('.landmark-node')[${i}].click()`);
@@ -151,11 +151,11 @@ try {
     assert.strictEqual(targetKf.sceneIndex, i, `Clicking landmark-node ${i} must activate scene ${i}, but got scene ${targetKf.sceneIndex}`);
   }
 
-  // Specifically check Chapter 7 (Scene 9: 7: Ed)
-  await evalExpr("document.querySelectorAll('.landmark-node')[9].click()");
+  // Specifically check Ed (Scene 10: 8: Ed)
+  await evalExpr("document.querySelectorAll('.landmark-node')[10].click()");
   await new Promise(r => setTimeout(r, 400));
   const edLabel = await evalExpr("document.getElementById('chapter-label').textContent.trim()");
-  assert.strictEqual(edLabel, '7: Ed', `Clicking Chapter 7 node must show '7: Ed', got '${edLabel}'`);
+  assert.strictEqual(edLabel, '8: Ed', `Clicking Chapter 8 node must show '8: Ed', got '${edLabel}'`);
 
   assert.strictEqual(consoleErrors.length, 0, 'Must have zero runtime console errors');
 

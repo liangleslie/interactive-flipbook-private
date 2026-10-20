@@ -55,7 +55,7 @@ try {
   for (let s = 1; s <= numSpreads; s++) {
     const pLeft = (s - 1) * 2 + 1;
     const pRight = pLeft + 1;
-    const expected = pRight <= innerPages.length ? `Pages ${pLeft}-${pRight}` : `Page ${pLeft}`;
+    const expected = `Pages ${pLeft}-${pRight}`;
     await evalExpr(`document.getElementById('btn-next').click()`);
     await new Promise(r => setTimeout(r, 1100));
     assert.strictEqual(await getIndicator(), expected, `Should be at ${expected}`);

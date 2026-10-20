@@ -74,7 +74,7 @@ try {
 
   // 4. Verify scrolling transitions to new lyrics and hides previous
   await evalExpr("window.scrollToScene(2)");
-  await new Promise(r => setTimeout(r, 600));
+  await new Promise(r => setTimeout(r, 1100));
   await evalExpr("window.handleScroll()");
 
   const scene2Active = JSON.parse(await evalExpr(

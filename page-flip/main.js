@@ -1,7 +1,28 @@
 import FlipBook from 'flipbook-js';
 import storyBoard from '../resources/story-board.json';
 
-const pages = storyBoard.pages || [];
+const rawPages = storyBoard.pages || [];
+// ponytail: flipbooks require even inner page count for 2-page spreads so back cover closes properly
+const pages = [...rawPages];
+if (pages.length % 2 === 1 && pages.length >= 2) {
+  const endPage = pages.pop();
+  pages.push({
+    id: 'page-autograph',
+    type: 'autograph',
+    pageNumber: pages.length,
+    navLabel: 'Memories',
+    chapterTag: 'Autographs & Memories',
+    title: 'Warm Wishes for Sherry! 💖',
+    narrative: 'Wishing our favourite Sherry endless joy, laughter, and sunny adventures on your next chapter!',
+    narrative2: 'Signed with love from all your friends & teammates! ✨',
+    upperArt: '',
+    lowerArt: '',
+    characterName: '',
+    backgroundArt: '',
+    cue: 'Flip to close ➔'
+  });
+  pages.push(endPage);
+}
 const mobilePillsContainer = document.getElementById('mobile-pills');
 const flipbookContainer = document.getElementById('flipbook');
 
@@ -28,6 +49,21 @@ if (flipbookContainer) {
             <p class="cover-author">${page.narrative || page.text2 || ''}</p>
             <p class="story-narrative-2">${page.narrative2 || ''}</p>
             <div class="cover-tap-hint">${page.cue || 'Tap to open ➔'}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (page.type === 'autograph') {
+      const sideClass = (idx % 2 === 1) ? 'page-left' : 'page-right';
+      return `
+        <div class="c-flipbook__page page-story ${sideClass} page-autograph">
+          <div class="story-content" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;height:100%;padding:2rem;">
+            <div style="font-size:3rem;margin-bottom:1rem;">💖 📝 🐾</div>
+            <span class="card-chapter-tag">${page.chapterTag}</span>
+            <h3 style="font-size:1.6rem;margin:0.5rem 0;">${page.title}</h3>
+            <p style="font-size:1.1rem;margin:0.5rem 0;line-height:1.6;">${page.narrative}</p>
+            <p class="story-narrative-2" style="font-size:1rem;color:#e11d48;font-style:italic;margin-top:1rem;">${page.narrative2}</p>
           </div>
         </div>
       `;

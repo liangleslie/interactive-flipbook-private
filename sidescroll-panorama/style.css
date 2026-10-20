@@ -329,7 +329,7 @@ body {
 .panorama-backdrop-layer {
   position: absolute;
   inset: 0;
-  background-image: var(--panorama-bg, url('../resources/jpg/panorama_boardgame.jpg'));
+  background-image: var(--panorama-bg, none);
   background-repeat: repeat-x;
   background-size: auto 100%;
   background-position: 0 bottom;
@@ -344,7 +344,7 @@ body {
 }
 
 .panorama-backdrop-layer.act-backdrop-1 {
-  background-image: var(--panorama-bg-1, url('../resources/jpg/panorama_backdrop.jpg'));
+  background-image: var(--panorama-bg-1, url('../resources/jpg/office-pano.jpg'));
 }
 
 /* Intrinsic image element inside backdrop layer for responsive width adaptation */

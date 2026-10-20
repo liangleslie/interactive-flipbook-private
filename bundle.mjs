@@ -311,6 +311,58 @@ function prepareInlinedStoryBoard(imageMap) {
   return walk(raw);
 }
 
+// ponytail: deduplicate repeated embedded media (e.g. backgroundArt, repeated character art) into reusable variables
+function serializeStoryBoardWithMediaVars(storyBoard, varName) {
+  const counts = new Map();
+  function countStrings(val) {
+    if (typeof val === 'string' && val.startsWith('data:')) {
+      counts.set(val, (counts.get(val) || 0) + 1);
+    } else if (Array.isArray(val)) {
+      val.forEach(countStrings);
+    } else if (val && typeof val === 'object') {
+      Object.values(val).forEach(countStrings);
+    }
+  }
+  countStrings(storyBoard);
+
+  const reused = new Map();
+  let varIdx = 0;
+  for (const [str, count] of counts.entries()) {
+    if (count > 1) {
+      reused.set(str, `__media_${varIdx++}`);
+    }
+  }
+
+  const varDecls = [];
+  for (const [str, varId] of reused.entries()) {
+    varDecls.push(`const ${varId} = ${JSON.stringify(str)};`);
+  }
+
+  function serialize(val) {
+    if (typeof val === 'string') {
+      if (reused.has(val)) {
+        return reused.get(val);
+      }
+      return JSON.stringify(val);
+    }
+    if (Array.isArray(val)) {
+      return `[${val.map(serialize).join(',')}]`;
+    }
+    if (val && typeof val === 'object') {
+      const props = Object.entries(val).map(([k, v]) => {
+        const key = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k) ? k : JSON.stringify(k);
+        return `${key}:${serialize(v)}`;
+      });
+      return `{${props.join(',')}}`;
+    }
+    return JSON.stringify(val);
+  }
+
+  const objCode = serialize(storyBoard);
+  const prefix = varDecls.length > 0 ? `${varDecls.join('\n')}\n` : '';
+  return `${prefix}const ${varName} = ${objCode};`;
+}
+
 function bundleUI(uiKey, { isAll = false, imageMap, storyBoard } = {}) {
   const config = UI_CONFIGS[uiKey];
   if (!config) throw new Error(`Unknown UI key: "${uiKey}"`);
@@ -347,13 +399,13 @@ function bundleUI(uiKey, { isAll = false, imageMap, storyBoard } = {}) {
     const jsPath = resolve(dirname(htmlPath), src);
     if (existsSync(jsPath)) {
       let jsContent = readFileSync(jsPath, 'utf-8');
-      // ponytail: inlined script cannot import external chunk on file://; embed storyboard JSON directly
+      jsContent = inlineImagesInText(jsContent, imageMap);
+      // ponytail: inlined script cannot import external chunk on file://; embed storyboard with deduplicated media variables
       if (storyBoard) {
         jsContent = jsContent.replace(/import\s*\{\s*t\s*as\s*([a-zA-Z0-9_$]+)\s*\}\s*from\s*["'][^"']*story-board[^"']*["'];?/g, (_, varName) => {
-          return `const ${varName} = ${JSON.stringify(storyBoard)};`;
+          return serializeStoryBoardWithMediaVars(storyBoard, varName);
         });
       }
-      jsContent = inlineImagesInText(jsContent, imageMap);
       return `<script type="module">\n${jsContent}\n</script>`;
     }
     return match;
