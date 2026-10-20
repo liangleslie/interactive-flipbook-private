@@ -56,8 +56,8 @@
       "title": "Meet Crystal!",
       "narrative": "Crystal brought sharp elegance and effortless poise, ready to conquer every challenge with a smile.",
       "narrative2": "Celestial grace! Crystal blossomed into a fairy maiden with flowing silk ribbons and lotus breezes!",
-      "upperArt": "../resources/jpg/crystal-1.jpg",
-      "lowerArt": "../resources/jpg/crystal-2.jpg",
+      "upperArt": "../resources/png/crystal-1.png",
+      "lowerArt": "../resources/png/crystal-2.png",
       "characterName": "Crystal",
       "backgroundArt": "../resources/jpg/panorama_boardgame.jpg",
       "cue": "Scroll along the path ➔"
