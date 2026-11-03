@@ -37,10 +37,10 @@ const UI_CONFIGS = {
     html: 'story-cards/index.html',
     aliases: ['deck', 'story-cards', '5'],
   },
-  'main': {
-    name: 'Prototype Hub / Menu',
-    html: 'index.html',
-    aliases: ['main', 'hub', 'menu', 'index', '6'],
+  'portal': {
+    name: 'Prototype Portal / Menu',
+    html: 'portal/index.html',
+    aliases: ['portal', 'hub', 'menu', 'index', '6'],
   },
 };
 
@@ -419,13 +419,14 @@ function bundleUI(uiKey, { isAll = false, imageMap, storyBoard } = {}) {
     html = html.replace(/<a[^>]*\bback-link\b[^>]*>[\s\S]*?<\/a>/gi, (match) => {
       return match.replace(/href=["']\.\.\/?["']/, 'href="./distro.html"');
     });
-    if (uiKey === 'main') {
+    if (uiKey === 'portal') {
       for (const [key] of Object.entries(UI_CONFIGS)) {
-        if (key === 'main') continue;
+        if (key === 'portal') continue;
+        html = html.replaceAll(`../${key}/`, `./distro-${key}.html`);
         html = html.replaceAll(`./${key}/`, `./distro-${key}.html`);
       }
     }
-  } else if (uiKey !== 'main') {
+  } else if (uiKey !== 'portal') {
     // Standalone single UI distro: remove back-link badge completely
     html = html.replace(/<a[^>]*\bback-link\b[^>]*>[\s\S]*?<\/a>\s*/gi, '');
   }
@@ -456,8 +457,8 @@ Options:
                           3) sidescroll-cards    (aliases: cards, strip)
                           4) vertical-story      (aliases: vertical, storyboard)
                           5) story-cards         (aliases: deck)
-                          6) main                (aliases: hub, menu)
-                          7) all                 (packages all UIs)
+                          6) portal              (aliases: hub, menu)
+                          7) all                 (packages all UIs + portal)
   --out, -o <file>      Output destination file (default: ./dist/distro.html)
   --max-res <px>        Max image dimension constraint in px (default: 1600)
   --quality, -q <1-100> Image compression quality (default: 82)
@@ -475,6 +476,7 @@ Short switches:
   --cards               Shortcut for --ui sidescroll-cards
   --vertical            Shortcut for --ui vertical-story
   --deck                Shortcut for --ui story-cards
+  --portal              Shortcut for --ui portal
   --all                 Shortcut for --ui all
 
 Examples:
@@ -484,6 +486,34 @@ Examples:
   node bundle.mjs --all
   node bundle.mjs
 `);
+}
+
+// ponytail: generate pages.csv directly from story-board.json into dist/ each time bundle.mjs runs
+function generatePagesCsv(outDir) {
+  const sbPath = resolve('./resources/story-board.json');
+  if (!existsSync(sbPath)) return;
+  const sb = JSON.parse(readFileSync(sbPath, 'utf-8'));
+  const headers = ['pageNumber', 'id', 'type', 'navLabel', 'characterName', 'chapterTag', 'title', 'narrative', 'narrative2', 'upperArt', 'lowerArt', 'backgroundArt', 'cue'];
+
+  function escapeCsv(val) {
+    if (val === undefined || val === null) return '';
+    const s = String(val);
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  }
+
+  const lines = [headers.join(',')];
+  for (const p of sb.pages || []) {
+    const row = headers.map(h => escapeCsv(p[h]));
+    lines.push(row.join(','));
+  }
+
+  if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
+  const csvPath = resolve(outDir, 'pages.csv');
+  writeFileSync(csvPath, lines.join('\n') + '\n', 'utf-8');
+  console.log(`  ✓ Generated ${csvPath}`);
 }
 
 async function promptUserChoice() {
@@ -497,7 +527,7 @@ async function promptUserChoice() {
   entries.forEach(([key, conf], idx) => {
     console.log(`  ${idx + 1}) ${key.padEnd(21)} (${conf.name})${idx === 0 ? ' [default]' : ''}`);
   });
-  console.log(`  7) all                   (Package all UIs)`);
+  console.log(`  7) all                   (Package all UIs + portal)`);
 
   return new Promise((res) => {
     rl.question('\nEnter choice [1-7, default 1]: ', (answer) => {
@@ -578,6 +608,8 @@ async function main() {
     execSync('npm run build', { stdio: 'inherit' });
   }
 
+  generatePagesCsv(DIST);
+
   if (runCheck) {
     console.log('🧪 Running packaging integrity check across all UIs...');
     const imageMap = buildImageMap(compressOptions);
@@ -611,7 +643,7 @@ async function main() {
   if (selectedUI === 'all') {
     // 1. Package individual UIs
     for (const key of Object.keys(UI_CONFIGS)) {
-      if (key === 'main') continue;
+      if (key === 'portal') continue;
       const html = bundleUI(key, { isAll: true, imageMap, storyBoard });
       const outFile = resolve(DIST, `distro-${key}.html`);
       writeFileSync(outFile, html, 'utf-8');
@@ -619,24 +651,27 @@ async function main() {
       console.log(`  ✓ Created ${outFile} (${mb} MB) [${UI_CONFIGS[key].name}]`);
     }
 
-    // 2. Package Hub as distro.html
-    const hubHtml = bundleUI('main', { isAll: true, imageMap, storyBoard });
-    const hubOut = outArg ? resolve(outArg) : DEFAULT_OUT;
-    writeFileSync(hubOut, hubHtml, 'utf-8');
-    const hubMB = (Buffer.byteLength(hubHtml, 'utf-8') / 1024 / 1024).toFixed(2);
-    console.log(`✅ Created Hub: ${hubOut} (${hubMB} MB)`);
+    // 2. Package Portal as distro.html
+    const portalHtml = bundleUI('portal', { isAll: true, imageMap, storyBoard });
+    const portalOut = outArg ? resolve(outArg) : DEFAULT_OUT;
+    writeFileSync(portalOut, portalHtml, 'utf-8');
+    const portalMB = (Buffer.byteLength(portalHtml, 'utf-8') / 1024 / 1024).toFixed(2);
+    console.log(`✅ Created Portal: ${portalOut} (${portalMB} MB)`);
+    const aliasOut = resolve(DIST, 'distro-portal.html');
+    if (portalOut !== aliasOut) {
+      writeFileSync(aliasOut, portalHtml, 'utf-8');
+      console.log(`  ✓ Also updated ${aliasOut}`);
+    }
   } else {
     const outFile = outArg ? resolve(outArg) : DEFAULT_OUT;
     const html = bundleUI(selectedUI, { isAll: false, imageMap, storyBoard });
     writeFileSync(outFile, html, 'utf-8');
     const mb = (Buffer.byteLength(html, 'utf-8') / 1024 / 1024).toFixed(2);
     console.log(`✅ Created ${outFile} (${mb} MB) [UI: ${selectedUI} — ${UI_CONFIGS[selectedUI].name}]`);
-    if (selectedUI !== 'main') {
-      const aliasOut = resolve(DIST, `distro-${selectedUI}.html`);
-      if (outFile !== aliasOut) {
-        writeFileSync(aliasOut, html, 'utf-8');
-        console.log(`  ✓ Also updated ${aliasOut}`);
-      }
+    const aliasOut = resolve(DIST, `distro-${selectedUI}.html`);
+    if (outFile !== aliasOut) {
+      writeFileSync(aliasOut, html, 'utf-8');
+      console.log(`  ✓ Also updated ${aliasOut}`);
     }
   }
 }

@@ -1,5 +1,5 @@
 // Self-check test for keyframe snapping engine in sidescroll-panorama
-// Run with: uv run node test-keyframe-snapping.mjs
+// Run with: uv run node test/test-keyframe-snapping.mjs
 import { spawn } from 'child_process';
 import assert from 'assert';
 

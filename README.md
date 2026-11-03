@@ -47,7 +47,7 @@ uv run npm install
 uv run npm run dev
 ```
 
-The prototype portal will be available at `http://localhost:5173/`.
+The dev server will redirect `http://localhost:5173/` to `/portal/` (or navigate directly to any prototype route).
 
 ### Production Build
 ```bash
@@ -78,7 +78,10 @@ uv run node bundle.mjs --vertical
 # Package story cards deck -> dist/distro.html
 uv run node bundle.mjs --deck
 
-# Package all prototypes + portal hub into dist/
+# Package prototype portal -> dist/distro.html
+uv run node bundle.mjs --portal
+
+# Package all prototypes + portal into dist/
 uv run node bundle.mjs --all
 
 # Custom output file
@@ -88,14 +91,21 @@ uv run node bundle.mjs --ui panorama -o ./dist/sherry-storybook.html
 uv run node bundle.mjs --check
 ```
 
-Output files are saved directly to `dist/` (e.g. `dist/distro.html`) and can be distributed or opened directly via `file://` in any browser without needing a web server.
+Output files and `pages.csv` are saved directly to `dist/` (e.g. `dist/distro.html`) and can be distributed or opened directly via `file://` in any browser without needing a web server.
 
 ---
 
 ## Automated Verification
 
-Headless CDP test script for verifying dynamic rendering across all 5 UIs:
+Run test suite via root runner:
 
 ```bash
-uv run node scratch/test-all-5-uis-dynamic.mjs
+# Run all tests
+uv run npm test
+# or
+uv run node test.mjs
+
+# Run a specific test
+uv run node test.mjs snapping
+uv run node test.mjs check
 ```

@@ -1,5 +1,5 @@
 // Self-check test for BGM audio player in sidescroll-panorama
-// Run with: uv run node test-bgm-audio.mjs
+// Run with: uv run node test/test-bgm-audio.mjs
 import { spawn } from 'child_process';
 import assert from 'assert';
 

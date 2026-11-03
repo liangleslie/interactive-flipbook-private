@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "bundle": "node bundle.mjs"
+    "bundle": "node bundle.mjs",
+    "test": "node test.mjs"
   },
   "dependencies": {
     "flipbook-js": "^1.1.1"

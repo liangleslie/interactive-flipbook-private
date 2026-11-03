@@ -5,10 +5,23 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   base: './',
   assetsInclude: ['**/*.mp3', '**/*.wav', '**/*.ogg'],
+  server: {
+    // ponytail: redirect root dev requests to the portal
+    middlewares: [
+      (req, res, next) => {
+        if (req.url === '/' || req.url === '') {
+          res.writeHead(302, { Location: '/portal/' });
+          res.end();
+          return;
+        }
+        next();
+      },
+    ],
+  },
   build: {
     rollupOptions: {
       input: {
-        main: resolve(import.meta.dirname, 'index.html'),
+        portal: resolve(import.meta.dirname, 'portal/index.html'),
         pageFlip: resolve(import.meta.dirname, 'page-flip/index.html'),
         sidescrollCards: resolve(import.meta.dirname, 'sidescroll-cards/index.html'),
         sidescrollPanorama: resolve(import.meta.dirname, 'sidescroll-panorama/index.html'),
