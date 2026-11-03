@@ -5,19 +5,6 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   base: './',
   assetsInclude: ['**/*.mp3', '**/*.wav', '**/*.ogg'],
-  server: {
-    // ponytail: redirect root dev requests to the portal
-    middlewares: [
-      (req, res, next) => {
-        if (req.url === '/' || req.url === '') {
-          res.writeHead(302, { Location: '/portal/' });
-          res.end();
-          return;
-        }
-        next();
-      },
-    ],
-  },
   build: {
     rollupOptions: {
       input: {
@@ -31,9 +18,29 @@ export default defineConfig({
     },
   },
   plugins: [
-    // ponytail: copy static resources/ directly into dist/resources/ so dynamic runtime URLs resolve
+    // ponytail: redirect root requests to /portal/ and copy static resources/ on build
     {
-      name: 'copy-resources',
+      name: 'storybook-portal-and-resources',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url === '/' || req.url === '/index.html') {
+            res.writeHead(302, { Location: '/portal/' });
+            res.end();
+            return;
+          }
+          next();
+        });
+      },
+      configurePreviewServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url === '/' || req.url === '/index.html') {
+            res.writeHead(302, { Location: '/portal/' });
+            res.end();
+            return;
+          }
+          next();
+        });
+      },
       closeBundle() {
         cpSync(resolve(import.meta.dirname, 'resources'), resolve(import.meta.dirname, 'dist/resources'), { recursive: true });
       },

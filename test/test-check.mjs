@@ -1,5 +1,5 @@
 // Self-check test for flipbook boundary guards and layer transitions
-// Run with: uv run node test/test-check.mjs
+// Run with: node test/test-check.mjs
 import { spawn } from 'child_process';
 import assert from 'assert';
 import storyBoard from '../resources/story-board.json' with { type: 'json' };

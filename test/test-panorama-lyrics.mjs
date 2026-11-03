@@ -1,5 +1,5 @@
 // Self-check test for dynamic background lyrics in sidescroll-panorama
-// Run with: uv run node test/test-panorama-lyrics.mjs
+// Run with: node test/test-panorama-lyrics.mjs
 import { spawn } from 'child_process';
 import assert from 'assert';
 import lyricsData from '../resources/lyrics.json' with { type: 'json' };

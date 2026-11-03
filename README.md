@@ -36,22 +36,22 @@ All 5 prototypes dynamically render from a single centralized story specificatio
 ## Getting Started
 
 ### Prerequisites
-- Node.js (v20+) or [`uv`](https://github.com/astral-sh/uv).
+- Node.js (v20+) and `npm`
 
 ### Development Server
 ```bash
 # Install dependencies
-uv run npm install
+npm install
 
 # Start Vite dev server
-uv run npm run dev
+npm run dev
 ```
 
 The dev server will redirect `http://localhost:5173/` to `/portal/` (or navigate directly to any prototype route).
 
 ### Production Build
 ```bash
-uv run npm run build
+npm run build
 ```
 
 Compiled bundles for all 5 prototypes and the portal are output to `dist/`.
@@ -62,33 +62,33 @@ To package a prototype into a completely self-contained, offline-ready single HT
 
 ```bash
 # Package continuous panorama (default) -> dist/distro.html
-uv run node bundle.mjs --panorama
+node bundle.mjs --panorama
 # or via npm script:
-uv run npm run bundle -- --panorama
+npm run bundle -- --panorama
 
 # Package responsive 3D flipbook -> dist/distro.html
-uv run node bundle.mjs --flip
+node bundle.mjs --flip
 
 # Package horizontal story strip -> dist/distro.html
-uv run node bundle.mjs --cards
+node bundle.mjs --cards
 
 # Package vertical storyboard -> dist/distro.html
-uv run node bundle.mjs --vertical
+node bundle.mjs --vertical
 
 # Package story cards deck -> dist/distro.html
-uv run node bundle.mjs --deck
+node bundle.mjs --deck
 
 # Package prototype portal -> dist/distro.html
-uv run node bundle.mjs --portal
+node bundle.mjs --portal
 
 # Package all prototypes + portal into dist/
-uv run node bundle.mjs --all
+node bundle.mjs --all
 
 # Custom output file
-uv run node bundle.mjs --ui panorama -o ./dist/sherry-storybook.html
+node bundle.mjs --ui panorama -o ./dist/sherry-storybook.html
 
 # Run packaging integrity check across all prototypes
-uv run node bundle.mjs --check
+node bundle.mjs --check
 ```
 
 Output files and `pages.csv` are saved directly to `dist/` (e.g. `dist/distro.html`) and can be distributed or opened directly via `file://` in any browser without needing a web server.
@@ -101,11 +101,11 @@ Run test suite via root runner:
 
 ```bash
 # Run all tests
-uv run npm test
+npm test
 # or
-uv run node test.mjs
+node test.mjs
 
 # Run a specific test
-uv run node test.mjs snapping
-uv run node test.mjs check
+node test.mjs snapping
+node test.mjs check
 ```

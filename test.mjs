@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Single root test runner entrypoint.
-// Run all tests:  uv run node test.mjs
-// Run single test: uv run node test.mjs <name>
+// Run all tests:  node test.mjs
+// Run single test: node test.mjs <name>
 import { readdirSync, existsSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
