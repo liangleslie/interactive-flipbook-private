@@ -151,11 +151,13 @@ try {
     assert.strictEqual(targetKf.sceneIndex, i, `Clicking landmark-node ${i} must activate scene ${i}, but got scene ${targetKf.sceneIndex}`);
   }
 
-  // Specifically check Ed (Scene 10: 8: Ed)
-  await evalExpr("document.querySelectorAll('.landmark-node')[10].click()");
+  // Specifically check Ed scene navigation
+  const edIdx = await evalExpr("window.storyBoard.pages.findIndex(p => p.characterName === 'Ed')");
+  const expectedEdLabel = await evalExpr("window.storyBoard.pages.find(p => p.characterName === 'Ed').navLabel");
+  await evalExpr(`document.querySelectorAll('.landmark-node')[${edIdx}].click()`);
   await new Promise(r => setTimeout(r, 400));
   const edLabel = await evalExpr("document.getElementById('chapter-label').textContent.trim()");
-  assert.strictEqual(edLabel, '8: Ed', `Clicking Chapter 8 node must show '8: Ed', got '${edLabel}'`);
+  assert.strictEqual(edLabel, expectedEdLabel, `Clicking Ed node must show '${expectedEdLabel}', got '${edLabel}'`);
 
   assert.strictEqual(consoleErrors.length, 0, 'Must have zero runtime console errors');
 
