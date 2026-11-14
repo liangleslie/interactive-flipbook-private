@@ -1,5 +1,5 @@
 import { resolve } from 'path';
-import { cpSync, writeFileSync } from 'fs';
+import { cpSync, writeFileSync, mkdirSync } from 'fs';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -13,12 +13,12 @@ export default defineConfig({
     },
   },
   plugins: [
-    // ponytail: redirect root requests to /sidescroll-panorama/ and copy static resources/ on build
+    // ponytail: redirect root/portal requests to /sidescroll-panorama/ and copy static resources/ on build
     {
       name: 'storybook-panorama-and-resources',
       configureServer(server) {
         server.middlewares.use((req, res, next) => {
-          if (req.url === '/' || req.url === '/index.html') {
+          if (req.url === '/' || req.url === '/index.html' || req.url.startsWith('/portal')) {
             res.writeHead(302, { Location: '/sidescroll-panorama/' });
             res.end();
             return;
@@ -28,7 +28,7 @@ export default defineConfig({
       },
       configurePreviewServer(server) {
         server.middlewares.use((req, res, next) => {
-          if (req.url === '/' || req.url === '/index.html') {
+          if (req.url === '/' || req.url === '/index.html' || req.url.startsWith('/portal')) {
             res.writeHead(302, { Location: '/sidescroll-panorama/' });
             res.end();
             return;
@@ -40,7 +40,12 @@ export default defineConfig({
         cpSync(resolve(import.meta.dirname, 'resources'), resolve(import.meta.dirname, 'dist/resources'), { recursive: true });
         writeFileSync(
           resolve(import.meta.dirname, 'dist/index.html'),
-          '<!DOCTYPE html><html><head><meta name="robots" content="noindex, nofollow, noarchive, nosnippet"><meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet"><meta http-equiv="refresh" content="0; url=./sidescroll-panorama/"><script>window.location.replace("./sidescroll-panorama/");</script></head><body><p><a href="./sidescroll-panorama/">Redirecting to Continuous Story Panorama...</a></p></body></html>\n',
+          '<!DOCTYPE html><html><head><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/><meta http-equiv="Pragma" content="no-cache"/><meta http-equiv="Expires" content="0"/><meta name="robots" content="noindex, nofollow, noarchive, nosnippet"><meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet"><meta http-equiv="refresh" content="0; url=./sidescroll-panorama/"><script>window.location.replace("./sidescroll-panorama/");</script></head><body><p><a href="./sidescroll-panorama/">Redirecting to Continuous Story Panorama...</a></p></body></html>\n',
+        );
+        mkdirSync(resolve(import.meta.dirname, 'dist/portal'), { recursive: true });
+        writeFileSync(
+          resolve(import.meta.dirname, 'dist/portal/index.html'),
+          '<!DOCTYPE html><html><head><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/><meta http-equiv="Pragma" content="no-cache"/><meta http-equiv="Expires" content="0"/><meta name="robots" content="noindex, nofollow, noarchive, nosnippet"><meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet"><meta http-equiv="refresh" content="0; url=../sidescroll-panorama/"><script>window.location.replace("../sidescroll-panorama/");</script></head><body><p><a href="../sidescroll-panorama/">Redirecting to Continuous Story Panorama...</a></p></body></html>\n',
         );
       },
     },
