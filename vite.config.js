@@ -1,5 +1,5 @@
 import { resolve } from 'path';
-import { cpSync } from 'fs';
+import { cpSync, writeFileSync } from 'fs';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -43,6 +43,10 @@ export default defineConfig({
       },
       closeBundle() {
         cpSync(resolve(import.meta.dirname, 'resources'), resolve(import.meta.dirname, 'dist/resources'), { recursive: true });
+        writeFileSync(
+          resolve(import.meta.dirname, 'dist/index.html'),
+          '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0; url=./portal/"><script>window.location.replace("./portal/");</script></head><body><p><a href="./portal/">Redirecting to Portal...</a></p></body></html>\n',
+        );
       },
     },
   ],
