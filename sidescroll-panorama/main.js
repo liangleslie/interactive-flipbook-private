@@ -161,6 +161,13 @@ function renderPanoramaDOM() {
 
               <p class="story-narrative-2">${page.narrative2 || page.caption || ''}</p>
               <div class="end-tag">${page.chapterTag || page.text1 || 'Continuous Story Panorama'}</div>
+              <div class="pwa-install-wrap">
+                <button type="button" id="btn-install-pwa" class="pwa-install-btn">
+                  <span class="pwa-btn-icon" aria-hidden="true">📲</span>
+                  <span class="pwa-btn-label">Click to install this on your device</span>
+                </button>
+                <p id="pwa-cache-status" class="pwa-cache-status" aria-live="polite"></p>
+              </div>
             </div>
           </div>
         </section>
@@ -657,7 +664,7 @@ let mouseStartTime = 0;
 
 window.addEventListener('mousedown', (e) => {
   if (e.button !== 0) return;
-  if (e.target.closest('button, a, input, .character-morph-target')) return;
+  if (e.target.closest('button, a, input, dialog, .character-morph-target')) return;
   isMouseDown = true;
   mouseStartX = e.clientX;
   mouseStartTime = performance.now();
@@ -1436,3 +1443,197 @@ window.addEventListener('resize', () => {
   updateScrollDrivenMorphs();
   if (viewport) updateLyricsParallax(viewport.scrollLeft);
 });
+
+// ========================================================
+// Offline PWA Service Worker & Device Install Controller
+// ========================================================
+function initPwaInstall() {
+  const installBtn = document.getElementById('btn-install-pwa');
+  const statusEl = document.getElementById('pwa-cache-status');
+  const installDialog = document.getElementById('pwa-install-dialog');
+  const dialogSteps = document.getElementById('pwa-dialog-steps');
+  const dialogBadge = document.getElementById('pwa-dialog-offline-badge');
+
+  let deferredPrompt = null;
+  let swRegistration = null;
+  let cacheComplete = false;
+
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+  function setStatus(text) {
+    if (statusEl) statusEl.textContent = text;
+  }
+
+  function updateProgressUI(data) {
+    if (!data || !data.total) return;
+    const pct = Math.min(100, Math.round((data.cached / data.total) * 100));
+    if (data.done && data.failed === 0) {
+      cacheComplete = true;
+      setStatus(isStandalone ? 'Installed & ready offline ✓' : '100% cached — ready for offline ✓');
+      if (dialogBadge) {
+        dialogBadge.textContent = '100% cached for offline ✓';
+        dialogBadge.classList.add('is-ready');
+      }
+    } else if (data.failed > 0 && data.cached + data.failed >= data.total) {
+      setStatus(`Cached ${data.cached}/${data.total} files (${data.failed} skipped)`);
+      if (dialogBadge) {
+        dialogBadge.textContent = `Cached ${data.cached}/${data.total} files offline`;
+      }
+    } else {
+      setStatus(`Saving offline copy: ${pct}% (${data.cached}/${data.total})`);
+      if (dialogBadge) {
+        dialogBadge.textContent = `Saving offline copy: ${pct}% (${data.cached}/${data.total})`;
+      }
+    }
+  }
+
+  function postSwMessage(msg) {
+    return new Promise((resolve) => {
+      const worker = swRegistration?.active || navigator.serviceWorker?.controller;
+      if (!worker) {
+        resolve(null);
+        return;
+      }
+      const channel = new MessageChannel();
+      const timer = setTimeout(() => resolve(null), 120000);
+      channel.port1.onmessage = (e) => {
+        clearTimeout(timer);
+        resolve(e.data);
+      };
+      worker.postMessage(msg, [channel.port2]);
+    });
+  }
+
+  async function ensureOfflineCached() {
+    if (!('serviceWorker' in navigator)) return null;
+    if (!swRegistration) {
+      try {
+        swRegistration = await navigator.serviceWorker.ready;
+      } catch {
+        return null;
+      }
+    }
+    const res = await postSwMessage({ type: 'PRECACHE_ALL' });
+    if (res) updateProgressUI(res);
+    return res;
+  }
+
+  if ('serviceWorker' in navigator && import.meta.env.PROD) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data?.type === 'PRECACHE_PROGRESS') {
+        updateProgressUI(event.data);
+      }
+    });
+
+    window.addEventListener('load', async () => {
+      try {
+        swRegistration = await navigator.serviceWorker.register('../sw.js', { scope: '../' });
+        await navigator.serviceWorker.ready;
+        const status = await postSwMessage({ type: 'GET_CACHE_STATUS' });
+        if (status) updateProgressUI(status);
+        if (!status?.done) {
+          ensureOfflineCached();
+        }
+      } catch (err) {
+        console.warn('Service Worker registration failed:', err);
+      }
+    });
+  }
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    if (installBtn) {
+      const label = installBtn.querySelector('.pwa-btn-label');
+      if (label) label.textContent = 'Installed on your device ✓';
+      installBtn.disabled = true;
+    }
+    setStatus('Installed & ready offline ✓');
+  });
+
+  if (installDialog && !('closedBy' in HTMLDialogElement.prototype)) {
+    installDialog.addEventListener('click', (event) => {
+      if (event.target !== installDialog) return;
+      const rect = installDialog.getBoundingClientRect();
+      const inside = (
+        rect.top <= event.clientY &&
+        event.clientY <= rect.top + rect.height &&
+        rect.left <= event.clientX &&
+        event.clientX <= rect.left + rect.width
+      );
+      if (!inside) installDialog.close();
+    });
+  }
+
+  function showManualInstallGuide() {
+    if (!installDialog || !dialogSteps) return;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    if (isIOS) {
+      dialogSteps.innerHTML = `
+        <ol>
+          <li>Tap the <strong>Share</strong> button (<code>📤</code>) in Safari's toolbar.</li>
+          <li>Scroll down and tap <strong>Add to Home Screen</strong> (<code>➕</code>).</li>
+          <li>Tap <strong>Add</strong> — it launches full-screen &amp; works offline!</li>
+        </ol>
+      `;
+    } else {
+      dialogSteps.innerHTML = `
+        <ol>
+          <li>Open your browser menu (<strong>⋮</strong> or <strong>Share</strong> icon).</li>
+          <li>Choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li>
+          <li>Once added, open it anytime even without internet!</li>
+        </ol>
+      `;
+    }
+
+    if (dialogBadge && !cacheComplete && !import.meta.env.PROD) {
+      dialogBadge.textContent = 'Offline caching activates on deployed HTTPS site';
+    }
+    installDialog.showModal();
+  }
+
+  if (!installBtn) return;
+
+  if (isStandalone) {
+    const label = installBtn.querySelector('.pwa-btn-label');
+    if (label) label.textContent = 'Installed on your device ✓';
+    installBtn.disabled = true;
+    setStatus('Running as installed app ✓');
+    return;
+  }
+
+  installBtn.addEventListener('click', async () => {
+    // Trigger background cache completion immediately in parallel
+    const cachePromise = ensureOfflineCached();
+
+    if (deferredPrompt) {
+      // Must invoke prompt() synchronously inside user gesture before any long async wait
+      const promptEvent = deferredPrompt;
+      deferredPrompt = null;
+      try {
+        await promptEvent.prompt();
+        const choice = await promptEvent.userChoice;
+        if (choice.outcome === 'accepted') {
+          setStatus('Installing... finishing offline cache');
+          await cachePromise;
+        } else {
+          deferredPrompt = promptEvent;
+        }
+        return;
+      } catch {
+        // Fallback to manual instructions if native prompt is blocked or unsupported
+      }
+    }
+
+    showManualInstallGuide();
+    await cachePromise;
+  });
+}
+
+initPwaInstall();

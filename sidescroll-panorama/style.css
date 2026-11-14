@@ -940,6 +940,153 @@ body {
   letter-spacing: 0.8px;
 }
 
+/* PWA Offline Install Button & Guide Dialog */
+.pwa-install-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.pwa-install-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 44px;
+  padding: 0.55rem 1.25rem;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%);
+  color: #ffffff;
+  font-family: var(--font-heading);
+  font-size: 0.94rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 20px -4px rgba(190, 18, 60, 0.45);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.pwa-install-btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 12px 24px -4px rgba(190, 18, 60, 0.55);
+}
+
+.pwa-install-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+}
+
+.pwa-install-btn:disabled {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 6px 16px -4px rgba(5, 150, 105, 0.35);
+  cursor: default;
+}
+
+.pwa-cache-status {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #6b7280;
+  min-height: 1.1em;
+}
+
+dialog.pwa-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(92vw, 390px);
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.32);
+  color: #1f2937;
+  overflow: visible;
+}
+
+dialog.pwa-dialog::backdrop {
+  background-color: rgba(15, 23, 42, 0.52);
+  backdrop-filter: blur(4px);
+}
+
+.pwa-dialog-body {
+  padding: 1.4rem 1.35rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.pwa-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.pwa-dialog-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.pwa-dialog-header h3 {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  color: #be123c;
+  margin: 0;
+}
+
+.pwa-dialog-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.pwa-dialog-badge.is-ready {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.pwa-dialog-steps ol {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: #374151;
+}
+
+.pwa-dialog-steps code {
+  background: #f3f4f6;
+  padding: 0.1rem 0.35rem;
+  border-radius: 6px;
+  font-family: inherit;
+}
+
+.pwa-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
+
+.pwa-dialog-close {
+  min-height: 40px;
+  padding: 0.45rem 1.25rem;
+  border-radius: 999px;
+  border: none;
+  background: #be123c;
+  color: #ffffff;
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* Floating Bottom Controls Toolbar */
 .controls-toolbar {
   position: absolute;
@@ -1411,6 +1558,16 @@ body {
 
   .end-tag {
     font-size: 0.72rem;
+  }
+
+  .pwa-install-btn {
+    font-size: 0.85rem;
+    padding: 0.45rem 1.05rem;
+    min-height: 42px;
+  }
+
+  .pwa-cache-status {
+    font-size: 0.7rem;
   }
 
   /* Floating Bottom Controls Toolbar */

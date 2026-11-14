@@ -7,6 +7,13 @@
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
   <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet" />
   <title>Magic Storybook — Continuous Story Panorama</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <meta name="theme-color" content="#be123c" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="For Sherry" />
+  <link rel="apple-touch-icon" href="./icons/icon-180.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -124,6 +131,21 @@
         <span class="icon">▶</span>
       </button>
     </footer>
+
+    <!-- PWA Install Guide Dialog (iOS / Manual Browser Fallback) -->
+    <dialog id="pwa-install-dialog" class="pwa-dialog" closedby="any" aria-labelledby="pwa-dialog-title">
+      <div class="pwa-dialog-body">
+        <div class="pwa-dialog-header">
+          <span class="pwa-dialog-icon" aria-hidden="true">📲</span>
+          <h3 id="pwa-dialog-title">Save to Your Home Screen</h3>
+        </div>
+        <p id="pwa-dialog-offline-badge" class="pwa-dialog-badge">Offline copy ready ✓</p>
+        <div id="pwa-dialog-steps" class="pwa-dialog-steps"></div>
+        <form method="dialog" class="pwa-dialog-actions">
+          <button type="submit" class="pwa-dialog-close">Got it</button>
+        </form>
+      </div>
+    </dialog>
   </div>
 
   <script type="module" src="./main.js"></script>
