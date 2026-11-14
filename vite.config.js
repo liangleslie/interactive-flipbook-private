@@ -8,23 +8,18 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        portal: resolve(import.meta.dirname, 'portal/index.html'),
-        pageFlip: resolve(import.meta.dirname, 'page-flip/index.html'),
-        sidescrollCards: resolve(import.meta.dirname, 'sidescroll-cards/index.html'),
         sidescrollPanorama: resolve(import.meta.dirname, 'sidescroll-panorama/index.html'),
-        verticalStory: resolve(import.meta.dirname, 'vertical-story/index.html'),
-        storyCards: resolve(import.meta.dirname, 'story-cards/index.html'),
       },
     },
   },
   plugins: [
-    // ponytail: redirect root requests to /portal/ and copy static resources/ on build
+    // ponytail: redirect root requests to /sidescroll-panorama/ and copy static resources/ on build
     {
-      name: 'storybook-portal-and-resources',
+      name: 'storybook-panorama-and-resources',
       configureServer(server) {
         server.middlewares.use((req, res, next) => {
           if (req.url === '/' || req.url === '/index.html') {
-            res.writeHead(302, { Location: '/portal/' });
+            res.writeHead(302, { Location: '/sidescroll-panorama/' });
             res.end();
             return;
           }
@@ -34,7 +29,7 @@ export default defineConfig({
       configurePreviewServer(server) {
         server.middlewares.use((req, res, next) => {
           if (req.url === '/' || req.url === '/index.html') {
-            res.writeHead(302, { Location: '/portal/' });
+            res.writeHead(302, { Location: '/sidescroll-panorama/' });
             res.end();
             return;
           }
@@ -45,7 +40,7 @@ export default defineConfig({
         cpSync(resolve(import.meta.dirname, 'resources'), resolve(import.meta.dirname, 'dist/resources'), { recursive: true });
         writeFileSync(
           resolve(import.meta.dirname, 'dist/index.html'),
-          '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0; url=./portal/"><script>window.location.replace("./portal/");</script></head><body><p><a href="./portal/">Redirecting to Portal...</a></p></body></html>\n',
+          '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0; url=./sidescroll-panorama/"><script>window.location.replace("./sidescroll-panorama/");</script></head><body><p><a href="./sidescroll-panorama/">Redirecting to Continuous Story Panorama...</a></p></body></html>\n',
         );
       },
     },
