@@ -40,7 +40,7 @@ export default defineConfig({
         cpSync(resolve(import.meta.dirname, 'resources'), resolve(import.meta.dirname, 'dist/resources'), { recursive: true });
         writeFileSync(
           resolve(import.meta.dirname, 'dist/index.html'),
-          '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0; url=./sidescroll-panorama/"><script>window.location.replace("./sidescroll-panorama/");</script></head><body><p><a href="./sidescroll-panorama/">Redirecting to Continuous Story Panorama...</a></p></body></html>\n',
+          '<!DOCTYPE html><html><head><meta name="robots" content="noindex, nofollow, noarchive, nosnippet"><meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet"><meta http-equiv="refresh" content="0; url=./sidescroll-panorama/"><script>window.location.replace("./sidescroll-panorama/");</script></head><body><p><a href="./sidescroll-panorama/">Redirecting to Continuous Story Panorama...</a></p></body></html>\n',
         );
       },
     },
